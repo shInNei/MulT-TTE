@@ -85,7 +85,7 @@ class MulT_TTE(nn.Module):
         timene = self.timene(timene_input)+timene_input
         
         ## relation mapping
-        relationrep = self.relationrep(inputs['edge_ids'],inputs['edge_index']) # [num_edges, dim]
+        relationrep = self.relationrep(inputs['edge_ids'],inputs['edgeindex']) # [num_edges, dim]
         # must map back to [B,T, dim]
         B,T = feature.shape[:2]
         relation_seq = torch.zeros(B,T,self.gat_hidden_dim, device=feature.device)

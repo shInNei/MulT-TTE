@@ -29,6 +29,22 @@ def MulT_TTE_collate_func(data, args, info_all):
         inds.append(l[0])
     lens = np.asarray([len(k) for k in linkids], dtype=np.int16)
     
+    edge_index = indexinfo  # [2, num_edges]
+    all_nodes = edge_index.flatten().unique()
+    all_nodes_sorted = all_nodes.sort().values
+    id_map = {int(n): i for i, n in enumerate(all_nodes_sorted)}
+
+    # Remap edge_index
+    src_raw = edge_index[0]
+    dst_raw = edge_index[1]
+    src_remap = torch.tensor([id_map[int(n)] for n in src_raw], device=edge_index.device)
+    dst_remap = torch.tensor([id_map[int(n)] for n in dst_raw], device=edge_index.device)
+    edge_index_remapped = torch.stack([src_remap, dst_remap])
+    
+    all_nodes = indexinfo.flatten().unique()
+    all_nodes_sorted = all_nodes.sort().values
+
+    id_map = {int(old): i for i, old in enumerate(all_nodes_sorted)}
     route_transitions = set()
     for route in linkids:
         route_transitions.update(zip(route[:-1], route[1:]))
