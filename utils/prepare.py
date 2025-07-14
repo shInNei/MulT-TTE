@@ -195,8 +195,6 @@ def load_datadict(args):
         phases = ['test']
     else:
         phases = ['train', 'val', 'test']
-    edge_index = torch.load(os.path.join(args.absPath, args.data_config['edges_dir'] + '.pt'))  # load edge index
-    num_edges = edge_index.shape[1]
     for phase in phases:
         tdata = np.load(os.path.join(args.absPath,args.data_config['data_dir'], phase + '.npy'), allow_pickle=True)
         data[phase] = tdata
@@ -209,15 +207,18 @@ def load_datadict(args):
     loader['test'] = DataLoader(Datadict(data['test']), batch_size=args.data_config['batch_size'],
                                     collate_fn=lambda x: eval(args.data_config['collate_fn' ])(x, args, info_all),
                                     shuffle=False, pin_memory=True)
-    return loader.copy(), StandardScaler2(mean=args.data_config['time_mean'], std=args.data_config['time_std']), num_edges
+    return loader.copy(), StandardScaler2(mean=args.data_config['time_mean'], std=args.data_config['time_std'])
 
 
 def create_model(args):
     absPath = os.path.join(os.path.dirname(__file__), "model_config.json")
+    edge_index = torch.load(os.path.join(args.absPath, args.data_config['index_dir'] + '.pt'))  # load edge index
+    
     with open(absPath) as file:
         model_config = json.load(file)[args.model]
     args.model_config = model_config
     model_config['pad_token_id'] = args.data_config['edges'] + 1
+    model_config['num_edges'] = edge_index.shape[1]
     if "MulT_TTE" in args.model:
         return MulT_TTE(**model_config)
 
