@@ -17,7 +17,7 @@ node_type = {'turning_circle':1, 'traffic_signals':2, 'crossing':3, 'motorway_ju
 
 # mlm任务的输入link index中需要预测的值不能是本身，否则产生信息泄露，TTE_edge_new_data_end2end_pre更正为TTE_edge_new_data_end2end
 def MulT_TTE_collate_func(data, args, info_all):
-    edgeinfo, nodeinfo, scaler, scaler2 = info_all
+    edgeinfo, nodeinfo, indexinfo, scaler, scaler2 = info_all
 
     time = torch.Tensor([d[-1] for d in data])
     linkids = []
@@ -28,7 +28,23 @@ def MulT_TTE_collate_func(data, args, info_all):
         dateinfo.append(l[2:5])
         inds.append(l[0])
     lens = np.asarray([len(k) for k in linkids], dtype=np.int16)
-
+    
+    route_transitions = set()
+    for route in linkids:
+        route_transitions.update(zip(route[:-1], route[1:]))
+    
+    src = indexinfo[0]
+    dst = indexinfo[1]
+    
+    mask = torch.tensor([
+        (s.item(), d.item()) in route_transitions
+        for s, d in zip(src, dst)
+    ])
+    
+    sub_edge_index = mask.nonzero(as_tuple=False).squeeze()
+    flat_mask = mask.flatten()
+    edge_ids = torch.arange(src.shape[0])[flat_mask]
+    
     def info(xs, date):
         infos = []
         length = 0
@@ -83,7 +99,8 @@ def MulT_TTE_collate_func(data, args, info_all):
     mask_encoder = np.zeros(mask.shape, dtype=np.int16)
     mask_encoder[mask] = np.concatenate([[1]*k for k in lens])
     return {'links':torch.FloatTensor(padded), 'lens':torch.LongTensor(lens), 'inds': inds, 'mask_label': torch.LongTensor(mask_label),
-            "linkindex":torch.LongTensor(linkindex), 'rawlinks': torch.LongTensor(rawlinks),'encoder_attention_mask': torch.LongTensor(mask_encoder)}, time
+            "linkindex":torch.LongTensor(linkindex), 'rawlinks': torch.LongTensor(rawlinks),'encoder_attention_mask': torch.LongTensor(mask_encoder),
+            "edge_ids": torch.LongTensor(edge_ids),'edgeindex': torch.LongTensor(sub_edge_index), 'flat_mask': torch.BoolTensor(flat_mask)}, time
 
 class BatchSampler:
     def __init__(self, dataset, batch_size):
@@ -125,7 +142,7 @@ class BatchSampler:
 
 def load_datadoct_pre(args):
     global info_all
-    edgeinfo, nodeinfo, scaler, scaler2 = None, None, None, None
+    edgeinfo, nodeinfo, indexinfo, scaler, scaler2 = None, None, None, None, None
     abspath = os.path.join(os.path.dirname(__file__), "data_config.json")
     with open(abspath) as file:
         data_config = json.load(file)[args.dataset]
@@ -134,6 +151,8 @@ def load_datadoct_pre(args):
         edgeinfo = pickle.load(f)
     with open(os.path.join(args.absPath,args.data_config['nodes_dir']), 'rb') as f:
         nodeinfo = pickle.load(f)
+    
+    indexinfo = torch.load(os.path.join(args.absPath,args.data_config['index_dir'] + '.pt'))
 
     if "porto" in args.dataset:
         scaler = StandardScaler()
@@ -156,7 +175,7 @@ def load_datadoct_pre(args):
     else:
         ValueError("Wrong Dataset Name")
 
-    info_all = [edgeinfo, nodeinfo, scaler, scaler2]
+    info_all = [edgeinfo, nodeinfo, indexinfo, scaler, scaler2]
 
 
 class Datadict(Dataset):

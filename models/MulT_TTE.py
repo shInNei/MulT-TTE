@@ -4,6 +4,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+from torch_geometric.nn import GATConv
 from models.LayerNormGRU import LayerNormGRU
 from transformers import BertConfig, BertForMaskedLM
 
@@ -12,9 +13,10 @@ bidirectional=False
 
 class MulT_TTE(nn.Module):
     def __init__(self, input_dim, seq_input_dim, seq_hidden_dim, seq_layer, bert_hiden_size, pad_token_id,
-                 bert_attention_heads, bert_hidden_layers, decoder_layer, decode_head, vocab_size=27300):
+                 bert_attention_heads, bert_hidden_layers, decoder_layer, decode_head, num_edges,vocab_size=27300):
 
         super(MulT_TTE, self).__init__()
+        self.gat_hidden_dim = 128
         self.bert_config = BertConfig(num_attention_heads = bert_attention_heads, hidden_size = bert_hiden_size, pad_token_id=pad_token_id,
                                       vocab_size=vocab_size, num_hidden_layers = bert_hidden_layers)
         self.seg_embedding_learning = BertForMaskedLM(self.bert_config)
@@ -24,6 +26,7 @@ class MulT_TTE(nn.Module):
         self.dateembed = nn.Embedding(367, 10)
         self.timeembed = nn.Embedding(1441, 20)
         self.gpsrep = nn.Linear(4, 16)
+        self.relationrep = GATEncoder(num_edges, embedding_dim=64, hidden_dim= self.gat_hidden_dim, heads=4, dropout=0.1)
         self.timene_dim = 3 + 10 + 20 + bert_hiden_size
 
         self.timene = nn.Sequential(
@@ -33,7 +36,7 @@ class MulT_TTE(nn.Module):
         )
 
         self.represent = nn.Sequential(
-            nn.Linear(input_dim, seq_input_dim),
+            nn.Linear(input_dim + self.gat_hidden_dim, seq_input_dim),
             nn.LeakyReLU(),
             nn.Linear(seq_input_dim, seq_input_dim)
         )
@@ -72,7 +75,8 @@ class MulT_TTE(nn.Module):
         daterep = self.dateembed(feature[:, :, 4].long())  # 10
         timerep = self.timeembed(feature[:, :, 5].long())
         gpsrep = self.gpsrep(feature[:, :, 6:10])
-
+        
+        
         datetimerep = torch.cat([weekrep, daterep, timerep], dim=-1)
 
         loss_1, hidden_states, prediction_scores = self.seg_embedding([inputs['linkindex'], inputs['encoder_attention_mask'], inputs['mask_label']])
@@ -80,7 +84,15 @@ class MulT_TTE(nn.Module):
         timene_input = torch.cat([self.seg_embedding_learning.bert.embeddings.word_embeddings(inputs['rawlinks']), datetimerep], dim=-1)
         timene = self.timene(timene_input)+timene_input
         representation = self.represent(torch.cat([feature[..., 1:3], highwayrep, gpsrep, timene], dim=-1))  # 2,5,16,97
-
+        ## relation mapping
+        relationrep = self.relationrep(inputs['edge_ids'],inputs['edge_index']) # [num_edges, dim]
+        # must map back to [B,T, dim]
+        relation_seq = torch.zeros_like(representation)
+        relation_seq[inputs['flat_mask']] = relationrep
+        
+        representation = torch.cat([representation, relation_seq], dim=-1)
+        
+        
         representation = representation if batch_first else representation.transpose(0, 1).contiguous()
         hiddens, rnn_states = self.sequence(representation, seq_lens=lens.long())
 
@@ -93,7 +105,31 @@ class MulT_TTE(nn.Module):
         output = args.scaler.inverse_transform(output)
         return output, loss_1
 
-
+class GATEncoder(nn.Module):
+    def __init__(self, num_edges, embedding_dim=64, hidden_dim=64, heads=4, dropout=0.1):
+        super().__init__()
+        
+        self.embeddings = nn.Embedding(num_edges, embedding_dim)
+        
+        self.gat1 = GATConv(embedding_dim, hidden_dim//heads, heads=heads, dropout=dropout)
+        self.gat2 = GATConv(hidden_dim, hidden_dim//heads, heads=heads, dropout=dropout)
+        
+        self.dropout = nn.Dropout(dropout)
+    
+    def forward(self,edge_ids, edge_index):
+        x = self.embeddings(edge_ids)
+        
+        
+        x = self.gat1(x, edge_index)
+        x = F.leaky_relu(x)
+        x = self.dropout(x)
+        
+        x= self.gat2(x, edge_index)
+        x = F.leaky_relu(x)
+        
+        return x
+        
+        
 class Norm(nn.Module):
     def __init__(self, d_model, eps=1e-6):
         super().__init__()
