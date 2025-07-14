@@ -42,6 +42,7 @@ def MulT_TTE_collate_func(data, args, info_all):
     ])
     
     sub_edge_index = mask.nonzero(as_tuple=False).squeeze()
+    
     flat_mask = mask.flatten()
     edge_ids = torch.arange(src.shape[0])[flat_mask]
     
@@ -100,7 +101,7 @@ def MulT_TTE_collate_func(data, args, info_all):
     mask_encoder[mask] = np.concatenate([[1]*k for k in lens])
     return {'links':torch.FloatTensor(padded), 'lens':torch.LongTensor(lens), 'inds': inds, 'mask_label': torch.LongTensor(mask_label),
             "linkindex":torch.LongTensor(linkindex), 'rawlinks': torch.LongTensor(rawlinks),'encoder_attention_mask': torch.LongTensor(mask_encoder),
-            "edge_ids": torch.LongTensor(edge_ids),'edgeindex': torch.LongTensor(sub_edge_index), 'flat_mask': torch.BoolTensor(flat_mask)}, time
+            "edge_ids": torch.LongTensor(edge_ids),'edgeindex': indexinfo[:,sub_edge_index], 'flat_mask': torch.BoolTensor(flat_mask)}, time
 
 class BatchSampler:
     def __init__(self, dataset, batch_size):
@@ -217,7 +218,7 @@ def create_model(args):
     with open(absPath) as file:
         model_config = json.load(file)[args.model]
     args.model_config = model_config
-    model_config['pad_token_id'] = args.data_config['edges'] + 1
+    model_config['pad_token_id'] = args.data_config['edges'] + 1    
     model_config['num_edges'] = edge_index.shape[1]
     if "MulT_TTE" in args.model:
         return MulT_TTE(**model_config)
