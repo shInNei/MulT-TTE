@@ -57,7 +57,7 @@ def train_main(args):
         sys.exit(0)
     print(f"{args.mode} {args.model}_{args.identify} on {args.dataset}")
     load_datadoct_pre(args)
-    data_loaders, scaler = load_datadict(args)
+    data_loaders, scaler, args.num_edges = load_datadict(args)
 
     args.scaler = scaler
     model = create_model(args)
