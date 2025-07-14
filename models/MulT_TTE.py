@@ -117,7 +117,7 @@ class GATEncoder(nn.Module):
     
     def forward(self,edge_ids, edge_index):
         x = self.embeddings(edge_ids)
-        
+        assert x.shape[0] == edge_index.shape[1], f"Edge index {x.shape[0]} and embeddings size {edge_index.shape[1]} mismatch"
         
         x = self.gat1(x, edge_index)
         x = F.leaky_relu(x)
