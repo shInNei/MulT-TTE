@@ -85,7 +85,7 @@ class MulT_TTE(nn.Module):
         timene = self.timene(timene_input)+timene_input
         
         ## relation mapping
-        relationrep = self.relationrep(inputs['edge_ids'],inputs['edgeindex']) # [num_edges, dim]
+        relationrep = self.relationrep(inputs['edgeids'],inputs['edgeindex']) # [num_edges, dim]
         # must map back to [B,T, dim]
         B,T = feature.shape[:2]
         relation_seq = torch.zeros(B,T,self.gat_hidden_dim, device=feature.device)
@@ -117,9 +117,9 @@ class GATEncoder(nn.Module):
     
     def forward(self,edge_ids, edge_index):
         x = self.embeddings(edge_ids)
-        assert x.shape[0] == edge_index.shape[1], f"Edge index {x.shape[0]} and embeddings size {edge_index.shape[1]} mismatch"
+        assert edge_index.max() < x.shape[0], f"Edge index {edge_index.max()} exceeds embeddings size {x.shape[0]}"
         
-        x = self.gat1(x, edge_index)
+        x = self.gat1(edge_ids, edge_index)
         x = F.leaky_relu(x)
         x = self.dropout(x)
         

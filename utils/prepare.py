@@ -29,22 +29,6 @@ def MulT_TTE_collate_func(data, args, info_all):
         inds.append(l[0])
     lens = np.asarray([len(k) for k in linkids], dtype=np.int16)
     
-    edge_index = indexinfo  # [2, num_edges]
-    all_nodes = edge_index.flatten().unique()
-    all_nodes_sorted = all_nodes.sort().values
-    id_map = {int(n): i for i, n in enumerate(all_nodes_sorted)}
-
-    # Remap edge_index
-    src_raw = edge_index[0]
-    dst_raw = edge_index[1]
-    src_remap = torch.tensor([id_map[int(n)] for n in src_raw], device=edge_index.device)
-    dst_remap = torch.tensor([id_map[int(n)] for n in dst_raw], device=edge_index.device)
-    edge_index_remapped = torch.stack([src_remap, dst_remap])
-    
-    all_nodes = indexinfo.flatten().unique()
-    all_nodes_sorted = all_nodes.sort().values
-
-    id_map = {int(old): i for i, old in enumerate(all_nodes_sorted)}
     route_transitions = set()
     for route in linkids:
         route_transitions.update(zip(route[:-1], route[1:]))
@@ -56,6 +40,16 @@ def MulT_TTE_collate_func(data, args, info_all):
         (s.item(), d.item()) in route_transitions
         for s, d in zip(src, dst)
     ])
+    
+    edge_index = torch.stack([src,dst], dim=0)
+    sub_edge_index = edge_index[:, mask]
+    
+    used_nodes = torch.unique(sub_edge_index)
+    
+    old_to_new = -torch.ones(indexinfo[0].max() + 1, dtype=torch.long)
+    old_to_new[used_nodes] = torch.arange(len(used_nodes))
+    
+    edge_index_remapped = old_to_new[sub_edge_index]
     
     sub_edge_index = mask.nonzero(as_tuple=False).squeeze()
     
@@ -117,7 +111,7 @@ def MulT_TTE_collate_func(data, args, info_all):
     mask_encoder[mask] = np.concatenate([[1]*k for k in lens])
     return {'links':torch.FloatTensor(padded), 'lens':torch.LongTensor(lens), 'inds': inds, 'mask_label': torch.LongTensor(mask_label),
             "linkindex":torch.LongTensor(linkindex), 'rawlinks': torch.LongTensor(rawlinks),'encoder_attention_mask': torch.LongTensor(mask_encoder),
-            "edge_ids": torch.LongTensor(edge_ids),'edgeindex': indexinfo[:,sub_edge_index], 'flat_mask': torch.BoolTensor(flat_mask)}, time
+            "edgeids": linkids,'edgeindex': edge_index_remapped, 'flat_mask': torch.BoolTensor(flat_mask)}, time
 
 class BatchSampler:
     def __init__(self, dataset, batch_size):
