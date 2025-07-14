@@ -83,15 +83,14 @@ class MulT_TTE(nn.Module):
 
         timene_input = torch.cat([self.seg_embedding_learning.bert.embeddings.word_embeddings(inputs['rawlinks']), datetimerep], dim=-1)
         timene = self.timene(timene_input)+timene_input
-        representation = self.represent(torch.cat([feature[..., 1:3], highwayrep, gpsrep, timene], dim=-1))  # 2,5,16,97
+        
         ## relation mapping
         relationrep = self.relationrep(inputs['edge_ids'],inputs['edge_index']) # [num_edges, dim]
         # must map back to [B,T, dim]
-        relation_seq = torch.zeros_like(representation)
+        B,T = feature.shape[:2]
+        relation_seq = torch.zeros(B,T,self.gat_hidden_dim, device=feature.device)
         relation_seq[inputs['flat_mask']] = relationrep
-        
-        representation = torch.cat([representation, relation_seq], dim=-1)
-        
+        representation = self.represent(torch.cat([feature[..., 1:3], highwayrep, gpsrep, timene,relation_seq], dim=-1))  # 2,5,16,97        
         
         representation = representation if batch_first else representation.transpose(0, 1).contiguous()
         hiddens, rnn_states = self.sequence(representation, seq_lens=lens.long())
