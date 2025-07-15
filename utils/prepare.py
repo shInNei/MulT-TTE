@@ -10,6 +10,7 @@ from torch.utils.data import Dataset
 from torch.utils.data.dataloader import DataLoader
 from utils.util import StandardScaler2
 from models.MulT_TTE import MulT_TTE
+from torch.nn.utils.rnn import pad_sequence
 
 
 highway = {'living_street':1, 'morotway':2, 'motorway_link':3, 'plannned':4, 'trunk':5, "secondary":6, "trunk_link":7, "tertiary_link":8, "primary":9, "residential":10, "primary_link":11, "unclassified":12, "tertiary":13, "secondary_link":14}
@@ -54,7 +55,9 @@ def MulT_TTE_collate_func(data, args, info_all):
     sub_edge_index = mask.nonzero(as_tuple=False).squeeze()
     
     flat_mask = mask.flatten()
-    edge_ids = torch.arange(src.shape[0])[flat_mask]
+    
+    linkids_tensor = [torch.LongTensor(k) for k in linkids]
+    linkids_tensor = pad_sequence(linkids_tensor, batch_first=True, padding_value=0)
     
     def info(xs, date):
         infos = []
@@ -111,7 +114,7 @@ def MulT_TTE_collate_func(data, args, info_all):
     mask_encoder[mask] = np.concatenate([[1]*k for k in lens])
     return {'links':torch.FloatTensor(padded), 'lens':torch.LongTensor(lens), 'inds': inds, 'mask_label': torch.LongTensor(mask_label),
             "linkindex":torch.LongTensor(linkindex), 'rawlinks': torch.LongTensor(rawlinks),'encoder_attention_mask': torch.LongTensor(mask_encoder),
-            "edgeids": linkids,'edgeindex': edge_index_remapped, 'flat_mask': torch.BoolTensor(flat_mask)}, time
+            "edgeids": linkids_tensor,'edgeindex': edge_index_remapped, 'flat_mask': torch.BoolTensor(flat_mask)}, time
 
 class BatchSampler:
     def __init__(self, dataset, batch_size):
