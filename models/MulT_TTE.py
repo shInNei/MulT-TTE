@@ -86,7 +86,7 @@ class MulT_TTE(nn.Module):
         
         ## relation mapping
         relationrep = self.relationrep(inputs['edgeids'],inputs['edgeindex']) # [num_edges, dim]
-        edge_lens = input['edge_lens']
+        edge_lens = inputs['edge_lens']
         B = edge_lens.shape[0]
         T = edge_lens.max() 
         D = relationrep.shape[-1] 
