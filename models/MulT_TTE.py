@@ -86,15 +86,22 @@ class MulT_TTE(nn.Module):
         
         ## relation mapping
         relationrep = self.relationrep(inputs['edgeids'],inputs['edgeindex']) # [num_edges, dim]
-        B = lens.shape[0]
-        T = lens.max() 
+        edge_lens = input['edge_lens']
+        B = edge_lens.shape[0]
+        T = edge_lens.max() 
         D = relationrep.shape[-1] 
         
-        relation_seq = torch.zeros(B, T, D, device=feature.device)  # [B,T, dim]
-        start = 0
-        for i, l in enumerate(lens):
-            relation_seq[i, :l] = relationrep[start:start + l]
-            start += l
+        # [num_edges, dim] -> [B, T, dim] -> B: batch size, T: max route length, D: dim
+        # on 
+        relationrep_split = torch.split(relationrep,edge_lens.tolist(), dim=0) # list of [l, dim] tensors
+        padded_relationrep = []
+        for edge in relationrep_split:
+            num_edge_i = edge.shape[0]
+            if num_edge_i < T:
+                padding = torch.zeros(T - num_edge_i, D, device=relationrep.device)
+                edge = torch.cat([edge, padding], dim=0)
+            padded_relationrep.append(edge)
+        relation_seq = torch.stack(padded_relationrep, dim=0)  # [B, T, dim]
         
         representation = self.represent(torch.cat([feature[..., 1:3], highwayrep, gpsrep, timene,relation_seq], dim=-1))  # 2,5,16,97        
         

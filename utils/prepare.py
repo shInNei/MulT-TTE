@@ -49,11 +49,9 @@ def MulT_TTE_collate_func(data, args, info_all):
         edgeindex_all.append(edges)
 
         offset += len(local_nodes)
-        
+    edge_lens = torch.LongTensor([len(x) for x in edgeids_all], dtype=torch.long)
     edgeids_tensor = torch.cat(edgeids_all, dim=0)         # global node embedding input
     edge_index_remapped = torch.cat(edgeindex_all, dim=1)  # disjoint graph batch
-    
-        
     
     def info(xs, date):
         infos = []
@@ -110,7 +108,7 @@ def MulT_TTE_collate_func(data, args, info_all):
     mask_encoder[mask] = np.concatenate([[1]*k for k in lens])
     return {'links':torch.FloatTensor(padded), 'lens':torch.LongTensor(lens), 'inds': inds, 'mask_label': torch.LongTensor(mask_label),
             "linkindex":torch.LongTensor(linkindex), 'rawlinks': torch.LongTensor(rawlinks),'encoder_attention_mask': torch.LongTensor(mask_encoder),
-            "edgeids": edgeids_tensor,'edgeindex': edge_index_remapped}, time
+            "edgeids": edgeids_tensor,'edgeindex': edge_index_remapped, 'edge_lens': edge_lens}, time
 
 class BatchSampler:
     def __init__(self, dataset, batch_size):
