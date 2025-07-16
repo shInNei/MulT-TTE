@@ -70,7 +70,7 @@ def train_main(args):
     print(f'model config: {args.model_config}')
     print(f'data config: {args.data_config}')
     print(f'arg: {args}')
-    print(model)
+    # print(model)
     # 训练
     if args.mode == 'train':
         if os.path.exists(model_folder):

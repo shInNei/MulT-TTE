@@ -11,7 +11,7 @@ from torch.utils.data.dataloader import DataLoader
 from utils.util import StandardScaler2
 from models.MulT_TTE import MulT_TTE
 from torch.nn.utils.rnn import pad_sequence
-
+from torch_geometric.data import Data, Batch
 
 highway = {'living_street':1, 'morotway':2, 'motorway_link':3, 'plannned':4, 'trunk':5, "secondary":6, "trunk_link":7, "tertiary_link":8, "primary":9, "residential":10, "primary_link":11, "unclassified":12, "tertiary":13, "secondary_link":14}
 node_type = {'turning_circle':1, 'traffic_signals':2, 'crossing':3, 'motorway_junction':4, "mini_roundabout":5}
@@ -30,34 +30,30 @@ def MulT_TTE_collate_func(data, args, info_all):
         inds.append(l[0])
     lens = np.asarray([len(k) for k in linkids], dtype=np.int16)
     
-    route_transitions = set()
-    for route in linkids:
-        route_transitions.update(zip(route[:-1], route[1:]))
+    edgeids_all = []
+    edgeindex_all = []
+    offset = 0
+
+    for route, date in zip(linkids, dateinfo):
+        valid = torch.tensor(route)
+        transitions = list(zip(valid[:-1], valid[1:]))
+
+        local_nodes = torch.unique(valid)
+        node2idx = {n.item(): i + offset for i, n in enumerate(local_nodes)}
+        edgeids_all.append(local_nodes)
+
+        edges = torch.tensor([
+            [node2idx[a.item()] for a, b in transitions],
+            [node2idx[b.item()] for a, b in transitions]
+        ])
+        edgeindex_all.append(edges)
+
+        offset += len(local_nodes)
+        
+    edgeids_tensor = torch.cat(edgeids_all, dim=0)         # global node embedding input
+    edge_index_remapped = torch.cat(edgeindex_all, dim=1)  # disjoint graph batch
     
-    src = indexinfo[0]
-    dst = indexinfo[1]
-    
-    mask = torch.tensor([
-        (s.item(), d.item()) in route_transitions
-        for s, d in zip(src, dst)
-    ])
-    
-    edge_index = torch.stack([src,dst], dim=0)
-    sub_edge_index = edge_index[:, mask]
-    
-    used_nodes = torch.unique(sub_edge_index)
-    
-    old_to_new = -torch.ones(indexinfo[0].max() + 1, dtype=torch.long)
-    old_to_new[used_nodes] = torch.arange(len(used_nodes))
-    
-    edge_index_remapped = old_to_new[sub_edge_index]
-    
-    sub_edge_index = mask.nonzero(as_tuple=False).squeeze()
-    
-    flat_mask = mask.flatten()
-    
-    linkids_tensor = [torch.LongTensor(k) for k in linkids]
-    linkids_tensor = pad_sequence(linkids_tensor, batch_first=True, padding_value=0)
+        
     
     def info(xs, date):
         infos = []
@@ -114,7 +110,7 @@ def MulT_TTE_collate_func(data, args, info_all):
     mask_encoder[mask] = np.concatenate([[1]*k for k in lens])
     return {'links':torch.FloatTensor(padded), 'lens':torch.LongTensor(lens), 'inds': inds, 'mask_label': torch.LongTensor(mask_label),
             "linkindex":torch.LongTensor(linkindex), 'rawlinks': torch.LongTensor(rawlinks),'encoder_attention_mask': torch.LongTensor(mask_encoder),
-            "edgeids": linkids_tensor,'edgeindex': edge_index_remapped, 'flat_mask': torch.BoolTensor(flat_mask)}, time
+            "edgeids": edgeids_tensor,'edgeindex': edge_index_remapped}, time
 
 class BatchSampler:
     def __init__(self, dataset, batch_size):
