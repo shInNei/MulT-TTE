@@ -49,7 +49,7 @@ def MulT_TTE_collate_func(data, args, info_all):
         edgeindex_all.append(edges)
 
         offset += len(local_nodes)
-    edge_lens = torch.LongTensor([len(x) for x in edgeids_all], dtype=torch.long)
+    edge_lens = torch.LongTensor([len(x) for x in edgeids_all])
     edgeids_tensor = torch.cat(edgeids_all, dim=0)         # global node embedding input
     edge_index_remapped = torch.cat(edgeindex_all, dim=1)  # disjoint graph batch
     
