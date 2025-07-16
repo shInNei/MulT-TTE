@@ -34,8 +34,8 @@ def MulT_TTE_collate_func(data, args, info_all):
     edgeindex_all = []
     offset = 0
 
-    for route, date in zip(linkids, dateinfo):
-        valid = torch.tensor(route)
+    for route in linkids:
+        valid = torch.LongTensor(route)
         transitions = list(zip(valid[:-1], valid[1:]))
 
         local_nodes = torch.unique(valid)

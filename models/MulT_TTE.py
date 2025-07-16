@@ -86,10 +86,16 @@ class MulT_TTE(nn.Module):
         
         ## relation mapping
         relationrep = self.relationrep(inputs['edgeids'],inputs['edgeindex']) # [num_edges, dim]
-        # must map back to [B,T, dim]
-        B,T = feature.shape[:2]
-        relation_seq = torch.zeros(B,T,self.gat_hidden_dim, device=feature.device)
-        relation_seq[inputs['flat_mask']] = relationrep
+        B = lens.shape[0]
+        T = lens.max() 
+        D = relationrep.shape[-1] 
+        
+        relation_seq = torch.zeros(B, T, D, device=feature.device)  # [B,T, dim]
+        start = 0
+        for i, l in enumerate(lens):
+            relation_seq[i, :l] = relationrep[start:start + l]
+            start += l
+        
         representation = self.represent(torch.cat([feature[..., 1:3], highwayrep, gpsrep, timene,relation_seq], dim=-1))  # 2,5,16,97        
         
         representation = representation if batch_first else representation.transpose(0, 1).contiguous()
@@ -119,7 +125,7 @@ class GATEncoder(nn.Module):
         x = self.embeddings(edge_ids)
         assert edge_index.max() < x.shape[0], f"Edge index {edge_index.max()} exceeds embeddings size {x.shape[0]}"
         
-        x = self.gat1(edge_ids, edge_index)
+        x = self.gat1(x, edge_index)
         x = F.leaky_relu(x)
         x = self.dropout(x)
         
