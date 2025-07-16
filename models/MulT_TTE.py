@@ -87,8 +87,7 @@ class MulT_TTE(nn.Module):
         ## relation mapping
         relationrep = self.relationrep(inputs['edgeids'],inputs['edgeindex']) # [num_edges, dim]
         edge_lens = inputs['edge_lens']
-        B = edge_lens.shape[0]
-        T = edge_lens.max() 
+        B, T = feature.shape[:2]
         D = relationrep.shape[-1] 
         
         # [num_edges, dim] -> [B, T, dim] -> B: batch size, T: max route length, D: dim
