@@ -50,7 +50,7 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                     optimizer.zero_grad()
                     with torch.set_grad_enabled(phase == 'train'):
 
-                        outputs, loss_1, attn_weights = model(features, args)
+                        outputs, loss_1 = model(features, args)
                         loss_2 = loss_func(truth=truth_data, predict=outputs)
                         loss = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2
 
