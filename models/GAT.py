@@ -53,7 +53,7 @@ if __name__ == "__main__":
     segment_id_to_subgraph_index = {int(n.item()): i for i, n in enumerate(unique_sub_segment)}
     x_remapped = torch.tensor([segment_id_to_subgraph_index[int(n.item())] for n in x])
     # [B,T,D]
-    out, attn_weights = model(sub_segment, sub_edge_index)
+    out = model(sub_segment, sub_edge_index)
     out_route = out[x_remapped]
     B,T = padded_linkids.shape
     D = out_route.shape[1]
