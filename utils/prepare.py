@@ -32,10 +32,11 @@ def MulT_TTE_collate_func(data, args, info_all):
         inds.append(l[0])
     lens = np.asarray([len(k) for k in linkids], dtype=np.int16)
     
-    global_edge_index = indexinfo
+    global_edge_index = indexinfo + 1  # +1 for padding token
+    assert (global_edge_index > 0).all(), "Edge index contains 0 after shifting"
     
-    linkids_tensor_list = [torch.tensor(l).long() for l in linkids]
-    padded_linkids = pad_sequence(linkids_tensor_list, batch_first=True, padding_value=-1)
+    linkids_tensor_list = [torch.tensor(l).long() + 1 for l in linkids] # +1 for padding token
+    padded_linkids = pad_sequence(linkids_tensor_list, batch_first=True, padding_value=0)
     flatten_linkids = padded_linkids.flatten()
     unique_linkids = flatten_linkids.unique()
     
@@ -221,7 +222,7 @@ def create_model(args):
         model_config = json.load(file)[args.model]
     args.model_config = model_config
     model_config['pad_token_id'] = args.data_config['edges'] + 1    
-    model_config['num_edges'] = edge_index.shape[1]
+    model_config['num_edges'] = edge_index.shape[1] + 1 # +1 for padding token
     if "MulT_TTE" in args.model:
         return MulT_TTE(**model_config)
 
