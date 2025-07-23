@@ -5,6 +5,7 @@ from torch import nn
 import torch.nn.functional as F
 
 from torch_geometric.nn import GATConv
+from models.GAT import GAT_Layer
 from models.LayerNormGRU import LayerNormGRU
 from transformers import BertConfig, BertForMaskedLM
 
@@ -26,7 +27,7 @@ class MulT_TTE(nn.Module):
         self.dateembed = nn.Embedding(367, 10)
         self.timeembed = nn.Embedding(1441, 20)
         self.gpsrep = nn.Linear(4, 16)
-        self.relationrep = GATEncoder(num_edges, embedding_dim=64, hidden_dim= self.gat_hidden_dim, heads=4, dropout=0.1)
+        self.relationrep = GAT_Layer(in_channels=num_edges, embedding_dim=64, out_channels=self.gat_hidden_dim, heads=4, dropout=0.1)
         self.timene_dim = 3 + 10 + 20 + bert_hiden_size
 
         self.timene = nn.Sequential(
@@ -85,22 +86,18 @@ class MulT_TTE(nn.Module):
         timene = self.timene(timene_input)+timene_input
         
         ## relation mapping
-        relationrep = self.relationrep(inputs['edgeids'],inputs['edgeindex']) # [num_edges, dim]
-        edge_lens = inputs['edge_lens']
+        relationrep = self.relationrep(inputs['edgeids'],inputs['edgeindex']) # [num_segments, dim]
+        relationrep = relationrep[inputs['x_remapped']]  # [num_segments_on_route, dim]
+        
         B, T = feature.shape[:2]
         D = relationrep.shape[-1] 
         
-        # [num_edges, dim] -> [B, T, dim] -> B: batch size, T: max route length, D: dim
-        # on 
-        relationrep_split = torch.split(relationrep,edge_lens.tolist(), dim=0) # list of [l, dim] tensors
-        padded_relationrep = []
-        for edge in relationrep_split:
-            num_edge_i = edge.shape[0]
-            if num_edge_i < T:
-                padding = torch.zeros(T - num_edge_i, D, device=relationrep.device)
-                edge = torch.cat([edge, padding], dim=0)
-            padded_relationrep.append(edge)
-        relation_seq = torch.stack(padded_relationrep, dim=0)  # [B, T, dim]
+        segment_id_to_output_index = {int(seg.item()): i for i, seg in enumerate(inputs['flatten_linkids'].unique())}
+        indices = torch.tensor([segment_id_to_output_index[int(seg.item())] for seg in inputs['flatten_linkids']])
+        # [B*T,dim]
+        gathered_out = relationrep[indices]
+        # [B*T,dim] -> [B, T, dim]
+        relation_seq = gathered_out.view(B, T, D)
         
         representation = self.represent(torch.cat([feature[..., 1:3], highwayrep, gpsrep, timene,relation_seq], dim=-1))  # 2,5,16,97        
         
