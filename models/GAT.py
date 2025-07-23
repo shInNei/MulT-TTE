@@ -30,7 +30,7 @@ if __name__ == "__main__":
     model = GAT_Layer(in_channels=num_edge, embedding_dim=64, out_channels=64, heads=2, dropout=0.6)
     linkids_tensor = torch.tensor([
         [1, 2, 5],   # Route 0
-        [2, 4, 6],   # Route 1
+        [2, 4],   # Route 1
     ])  # shape: [B=2, T=3]
     x = linkids_tensor.flatten().unique() 
     flat_linkids_tensor = linkids_tensor.flatten()

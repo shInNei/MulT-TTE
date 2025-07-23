@@ -13,6 +13,7 @@ from models.MulT_TTE import MulT_TTE
 from torch.nn.utils.rnn import pad_sequence
 from torch_geometric.data import Data, Batch
 from torch_geometric.utils import k_hop_subgraph
+from torch.nn.utils.rnn import pad_sequence
 
 highway = {'living_street':1, 'morotway':2, 'motorway_link':3, 'plannned':4, 'trunk':5, "secondary":6, "trunk_link":7, "tertiary_link":8, "primary":9, "residential":10, "primary_link":11, "unclassified":12, "tertiary":13, "secondary_link":14}
 node_type = {'turning_circle':1, 'traffic_signals':2, 'crossing':3, 'motorway_junction':4, "mini_roundabout":5}
@@ -33,7 +34,9 @@ def MulT_TTE_collate_func(data, args, info_all):
     
     global_edge_index = indexinfo
     
-    flatten_linkids = torch.tensor(linkids).flatten()
+    linkids_tensor_list = [torch.tensor(l).long() for l in linkids]
+    padded_linkids = pad_sequence(linkids_tensor_list, batch_first=True, padding_value=-1)
+    flatten_linkids = padded_linkids.flatten()
     unique_linkids = flatten_linkids.unique()
     
     sub_segment, sub_edge_index, _, edge_mask = k_hop_subgraph(
