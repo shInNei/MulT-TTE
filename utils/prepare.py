@@ -222,7 +222,8 @@ def create_model(args):
         model_config = json.load(file)[args.model]
     args.model_config = model_config
     model_config['pad_token_id'] = args.data_config['edges'] + 1    
-    model_config['num_edges'] = edge_index.shape[1] + 1 # +1 for padding token
+    #FIXME: rename num_edges to num_segments
+    model_config['num_edges'] = edge_index.unique().shape[0] + 1 # +1 for padding token
     if "MulT_TTE" in args.model:
         return MulT_TTE(**model_config)
 

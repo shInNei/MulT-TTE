@@ -50,7 +50,7 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                     optimizer.zero_grad()
                     with torch.set_grad_enabled(phase == 'train'):
 
-                        outputs, loss_1 = model(features, args)
+                        outputs, loss_1, attn_weights = model(features, args)
                         loss_2 = loss_func(truth=truth_data, predict=outputs)
                         loss = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2
 
@@ -65,6 +65,7 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
 
                     with torch.no_grad():
                         predictions.append(outputs.cpu().detach().numpy())
+                            
 
                     running_loss[phase] += loss.item() * truth_data.size(0)
                     if step % 1000 == 0:
@@ -93,6 +94,7 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                                          optimizer_state_dict=copy.deepcopy(optimizer.state_dict()))
                         save_model(f"{model_folder}/best_model.pkl", **save_dict)
                         patiance = 0
+                        
                     else:
                         patiance += 1
                         print(f"Current MAE {scores['MAE']} more than best MAE {best_mae}, patience: {patiance}")
