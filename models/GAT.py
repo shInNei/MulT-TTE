@@ -21,7 +21,7 @@ class GAT_Layer(nn.Module):
     def forward(self, x, edge_index):
         
         x_embed = self.embeddings(x)
-        x_gat, (gat_edge_index, attn_weights) = self.gat_conv(x_embed, edge_index)
+        x_gat = self.gat_conv(x_embed, edge_index)
         x_cat = torch.cat([x_embed,x_gat], dim=-1)
         out = F.leaky_relu(x_gat)
         out = self.dropout(out)
