@@ -26,7 +26,7 @@ class MulT_TTE(nn.Module):
         self.weekembed = nn.Embedding(8, 3)
         self.dateembed = nn.Embedding(367, 10)
         self.timeembed = nn.Embedding(1441, 20)
-        self.gpsrep = nn.Linear(4, 16)
+        # self.gpsrep = nn.Linear(4, 16)
         self.relationrep = GAT_Layer(in_channels=num_edges, embedding_dim=64, out_channels=self.gat_hidden_dim, heads=4, dropout=0.1)
         self.timene_dim = 3 + 10 + 20 + bert_hiden_size
 
@@ -37,7 +37,7 @@ class MulT_TTE(nn.Module):
         )
 
         self.represent = nn.Sequential(
-            nn.Linear(input_dim + self.gat_hidden_dim, seq_input_dim),
+            nn.Linear(input_dim - 16 + self.gat_hidden_dim, seq_input_dim),
             nn.LeakyReLU(),
             nn.Linear(seq_input_dim, seq_input_dim)
         )
@@ -75,7 +75,7 @@ class MulT_TTE(nn.Module):
         weekrep = self.weekembed(feature[:, :, 3].long())
         daterep = self.dateembed(feature[:, :, 4].long())  # 10
         timerep = self.timeembed(feature[:, :, 5].long())
-        gpsrep = self.gpsrep(feature[:, :, 6:10])
+        # gpsrep = self.gpsrep(feature[:, :, 6:10])
         
         
         datetimerep = torch.cat([weekrep, daterep, timerep], dim=-1)
@@ -99,7 +99,7 @@ class MulT_TTE(nn.Module):
         # [B*T,dim] -> [B, T, dim]
         relation_seq = gathered_out.view(B, T, D)
         
-        representation = self.represent(torch.cat([feature[..., 1:3], highwayrep, gpsrep, timene,relation_seq], dim=-1))  # 2,5,16,97        
+        representation = self.represent(torch.cat([feature[..., 1:3], highwayrep, timene,relation_seq], dim=-1))  # 2,5,16,97        
         
         representation = representation if batch_first else representation.transpose(0, 1).contiguous()
         hiddens, rnn_states = self.sequence(representation, seq_lens=lens.long())
