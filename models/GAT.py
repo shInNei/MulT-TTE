@@ -12,19 +12,26 @@ from torch_geometric.utils import k_hop_subgraph
 
 # GAT LAYER THAT RETURN AN ATTENTION MATRIX
 class GAT_Layer(nn.Module):
-    def __init__(self, in_channels, embedding_dim=64, out_channels=64, heads=1, dropout=0.6):
+    def __init__(self, in_channels, embedding_dim=64, out_channels=64, heads=1, dropout=0.2):
         super().__init__()
         self.embeddings = nn.Embedding(in_channels,embedding_dim, padding_idx=0)
-        self.gat_conv = GATConv(embedding_dim, out_channels // heads, heads=heads, dropout=dropout)
+        self.gat_1 = GATConv(embedding_dim, out_channels // heads, heads=heads, dropout=dropout)
+        self.gat_2 = GATConv(out_channels, out_channels, heads=1, dropout=dropout)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x, edge_index):
         
         x_embed = self.embeddings(x)
-        x_gat = self.gat_conv(x_embed, edge_index)
-        x_cat = torch.cat([x_embed,x_gat], dim=-1)
-        out = F.leaky_relu(x_gat)
+        
+        x_gat1 = self.gat_1(x_embed, edge_index)
+        # x_cat = torch.cat([x_embed,x_gat1], dim=-1)
+        x_gat1 = F.leaky_relu(x_gat1)
+        x_gat1 = self.dropout(x_gat1)
+        
+        out = self.gat_2(x_gat1, edge_index)
+        out = F.leaky_relu(out)
         out = self.dropout(out)
+        
         return out
         
 if __name__ == "__main__":
@@ -47,7 +54,7 @@ if __name__ == "__main__":
     print(flat_linkids_tensor)
     print(x)
     sub_segment, sub_edge_index, _, edge_mask = k_hop_subgraph(
-        x, num_hops=1, edge_index=global_edge_index,relabel_nodes=True
+        x, num_hops=2, edge_index=global_edge_index,relabel_nodes=True
     )
     unique_sub_segment, inverse_indices = torch.unique(sub_segment, return_inverse=True)
     segment_id_to_subgraph_index = {int(n.item()): i for i, n in enumerate(unique_sub_segment)}
@@ -64,5 +71,3 @@ if __name__ == "__main__":
     out_route = gathered_out.view(B, T, D)
     print(segment_id_to_output_index)
     print("Output shape:", out_route.shape)
-    print()
-    print("Attention weights shape:", attn_weights.shape)

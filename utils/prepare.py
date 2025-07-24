@@ -41,7 +41,7 @@ def MulT_TTE_collate_func(data, args, info_all):
     unique_linkids = flatten_linkids.unique()
     
     sub_segment, sub_edge_index, _, edge_mask = k_hop_subgraph(
-        unique_linkids, num_hops=1, edge_index=global_edge_index, relabel_nodes=True
+        unique_linkids, num_hops=2, edge_index=global_edge_index, relabel_nodes=True
     )
     
     unique_sub_segment, inverse_indices = torch.unique(sub_segment, return_inverse=True)
