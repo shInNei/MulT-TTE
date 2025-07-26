@@ -38,16 +38,6 @@ def MulT_TTE_collate_func(data, args, info_all):
     linkids_tensor_list = [torch.tensor(l).long() + 1 for l in linkids] # +1 for padding token
     padded_linkids = pad_sequence(linkids_tensor_list, batch_first=True, padding_value=0)
     flatten_linkids = padded_linkids.flatten()
-    unique_linkids = flatten_linkids.unique()
-    
-    sub_segment, sub_edge_index, _, edge_mask = k_hop_subgraph(
-        unique_linkids, num_hops=2, edge_index=global_edge_index, relabel_nodes=True
-    )
-    
-    unique_sub_segment, inverse_indices = torch.unique(sub_segment, return_inverse=True)
-    segment_id_to_subgraph_index = {int(n.item()): i for i, n in enumerate(unique_sub_segment)}
-
-    x_remapped = torch.tensor([segment_id_to_subgraph_index[int(n.item())] for n in unique_linkids])
     
     def info(xs, date):
         infos = []
@@ -104,7 +94,7 @@ def MulT_TTE_collate_func(data, args, info_all):
     mask_encoder[mask] = np.concatenate([[1]*k for k in lens])
     return {'links':torch.FloatTensor(padded), 'lens':torch.LongTensor(lens), 'inds': inds, 'mask_label': torch.LongTensor(mask_label),
             "linkindex":torch.LongTensor(linkindex), 'rawlinks': torch.LongTensor(rawlinks),'encoder_attention_mask': torch.LongTensor(mask_encoder),
-            "edgeids": sub_segment,'edgeindex': sub_edge_index, 'x_remapped': x_remapped, 'flatten_linkids': flatten_linkids}, time
+            'edgeindex': global_edge_index,'flatten_linkids': flatten_linkids}, time
 
 class BatchSampler:
     def __init__(self, dataset, batch_size):
@@ -157,7 +147,7 @@ def load_datadoct_pre(args):
         nodeinfo = pickle.load(f)
     
     indexinfo = torch.load(os.path.join(args.absPath,args.data_config['index_dir'] + '.pt'))
-
+    graphinfo = torch.load(os.path.join(args.absPath,args.data_config['graph_dir'] + '.pt'))
     if "porto" in args.dataset:
         scaler = StandardScaler()
         scaler.fit([[0, 0]])
@@ -223,7 +213,7 @@ def create_model(args):
     args.model_config = model_config
     model_config['pad_token_id'] = args.data_config['edges'] + 1    
     #FIXME: rename num_edges to num_segments
-    model_config['num_edges'] = edge_index.unique().shape[0] + 1 # +1 for padding token
+    model_config['num_edges'] = edge_index.max().item() + 2 # 1 for padding token, 1 for moved index
     if "MulT_TTE" in args.model:
         return MulT_TTE(**model_config)
 

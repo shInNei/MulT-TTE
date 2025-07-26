@@ -20,6 +20,7 @@
     "edges_dir": "mydata/network_porto/porto_edges_new_simplify.pkl",
     "nodes_dir": "mydata/network_porto/porto_nodes_new.pkl",
     "index_dir": "mydata/porto_edge_index",
+    "graph_dir": "mydata/porto_x_all",
     "gps_range": [41.12, -8.71690, 41.22, -8.56924]
   }
 

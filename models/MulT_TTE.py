@@ -86,18 +86,14 @@ class MulT_TTE(nn.Module):
         timene = self.timene(timene_input)+timene_input
         
         ## relation mapping
-        relationrep = self.relationrep(inputs['edgeids'],inputs['edgeindex']) # [num_segments, dim]
-        relationrep = relationrep[inputs['x_remapped']]  # [num_segments_on_route, dim]
+        relationrep = self.relationrep(inputs['edgeindex']) # [num_segments, dim]
+        relationrep = relationrep[inputs['flatten_linkids']]  # [B*T, dim]
         
         B, T = feature.shape[:2]
         D = relationrep.shape[-1] 
         
-        segment_id_to_output_index = {int(seg.item()): i for i, seg in enumerate(inputs['flatten_linkids'].unique())}
-        indices = torch.tensor([segment_id_to_output_index[int(seg.item())] for seg in inputs['flatten_linkids']])
-        # [B*T,dim]
-        gathered_out = relationrep[indices]
         # [B*T,dim] -> [B, T, dim]
-        relation_seq = gathered_out.view(B, T, D)
+        relation_seq = relationrep.view(B, T, D)
         
         representation = self.represent(torch.cat([feature[..., 1:3], highwayrep, gpsrep, timene,relation_seq], dim=-1))  # 2,5,16,97        
         
@@ -112,31 +108,6 @@ class MulT_TTE(nn.Module):
         output = self.hid2out(hidden)
         output = args.scaler.inverse_transform(output)
         return output, loss_1
-
-class GATEncoder(nn.Module):
-    def __init__(self, num_edges, embedding_dim=64, hidden_dim=64, heads=4, dropout=0.1):
-        super().__init__()
-        
-        self.embeddings = nn.Embedding(num_edges, embedding_dim)
-        
-        self.gat1 = GATConv(embedding_dim, hidden_dim//heads, heads=heads, dropout=dropout)
-        self.gat2 = GATConv(hidden_dim, hidden_dim//heads, heads=heads, dropout=dropout)
-        
-        self.dropout = nn.Dropout(dropout)
-    
-    def forward(self,edge_ids, edge_index):
-        x = self.embeddings(edge_ids)
-        assert edge_index.max() < x.shape[0], f"Edge index {edge_index.max()} exceeds embeddings size {x.shape[0]}"
-        
-        x = self.gat1(x, edge_index)
-        x = F.leaky_relu(x)
-        x = self.dropout(x)
-        
-        x= self.gat2(x, edge_index)
-        x = F.leaky_relu(x)
-        
-        return x
-        
         
 class Norm(nn.Module):
     def __init__(self, d_model, eps=1e-6):
