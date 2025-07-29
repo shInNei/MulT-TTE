@@ -4,7 +4,7 @@ import pickle
 
 import numpy as np
 import torch
-from sklearn.preprocessing import StandardScaler
+# from sklearn.preprocessing import StandardScaler
 from torch.nn import SmoothL1Loss, MSELoss
 from torch.utils.data import Dataset
 from torch.utils.data.dataloader import DataLoader
@@ -20,13 +20,13 @@ node_type = {'turning_circle':1, 'traffic_signals':2, 'crossing':3, 'motorway_ju
 
 # mlm任务的输入link index中需要预测的值不能是本身，否则产生信息泄露，TTE_edge_new_data_end2end_pre更正为TTE_edge_new_data_end2end
 def MulT_TTE_collate_func(data, args, info_all):
-    edgeinfo, nodeinfo, indexinfo, scaler, scaler2 = info_all
+    edgeinfo, nodeinfo, indexinfo,coordsinfo, scaler, scaler2 = info_all
 
     time = torch.Tensor([d[-1] for d in data])
     linkids = []
     dateinfo = []
     inds = []
-    for ind, l in enumerate(data):
+    for _, l in enumerate(data):
         linkids.append(np.asarray(l[1]))
         dateinfo.append(l[2:5])
         inds.append(l[0])
@@ -34,6 +34,7 @@ def MulT_TTE_collate_func(data, args, info_all):
     
     global_edge_index = indexinfo + 1  # +1 for padding token
     assert (global_edge_index > 0).all(), "Edge index contains 0 after shifting"
+    global_coords_padded = torch.cat([torch.zeroes(1,6,device=args.device),coordsinfo], dim=0)  # +1 for padding token
     
     linkids_tensor_list = [torch.tensor(l).long() + 1 for l in linkids] # +1 for padding token
     padded_linkids = pad_sequence(linkids_tensor_list, batch_first=True, padding_value=0)
@@ -94,7 +95,7 @@ def MulT_TTE_collate_func(data, args, info_all):
     mask_encoder[mask] = np.concatenate([[1]*k for k in lens])
     return {'links':torch.FloatTensor(padded), 'lens':torch.LongTensor(lens), 'inds': inds, 'mask_label': torch.LongTensor(mask_label),
             "linkindex":torch.LongTensor(linkindex), 'rawlinks': torch.LongTensor(rawlinks),'encoder_attention_mask': torch.LongTensor(mask_encoder),
-            'edgeindex': global_edge_index,'flatten_linkids': flatten_linkids}, time
+            'edgeindex': global_edge_index,'coords':global_coords_padded,'flatten_linkids': flatten_linkids}, time
 
 class BatchSampler:
     def __init__(self, dataset, batch_size):
@@ -147,7 +148,7 @@ def load_datadoct_pre(args):
         nodeinfo = pickle.load(f)
     
     indexinfo = torch.load(os.path.join(args.absPath,args.data_config['index_dir'] + '.pt'))
-    graphinfo = torch.load(os.path.join(args.absPath,args.data_config['graph_dir'] + '.pt'))
+    coordsinfo = torch.load(os.path.join(args.absPath,args.data_config['coords_dir'] + '.pt'))
     if "porto" in args.dataset:
         scaler = StandardScaler()
         scaler.fit([[0, 0]])
@@ -169,8 +170,17 @@ def load_datadoct_pre(args):
     else:
         ValueError("Wrong Dataset Name")
 
-    info_all = [edgeinfo, nodeinfo, indexinfo, scaler, scaler2]
+    info_all = [edgeinfo, nodeinfo, indexinfo, coordsinfo, scaler, scaler2]
 
+def test_info_all():
+    edgeinfo, nodeinfo, indexinfo, scaler, scaler2 = None, None, None, None, None
+    
+    with open("mydata/network_porto/porto_edges_new_simplify.pkl", 'rb') as f:
+        edgeinfo = pickle.load(f)
+    with open("mydata/network_porto/porto_nodes_new.pkl", 'rb') as f:
+        nodeinfo = pickle.load(f)
+    indexinfo = torch.load("mydata/porto_edge_index.pt")
+    return [edgeinfo, nodeinfo, indexinfo, scaler, scaler2]
 
 class Datadict(Dataset):
     def __init__(self, inputs):
@@ -213,7 +223,6 @@ def create_model(args):
     args.model_config = model_config
     model_config['pad_token_id'] = args.data_config['edges'] + 1    
     #FIXME: rename num_edges to num_segments
-    model_config['num_edges'] = edge_index.max().item() + 2 # 1 for padding token, 1 for moved index
     if "MulT_TTE" in args.model:
         return MulT_TTE(**model_config)
 

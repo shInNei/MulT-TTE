@@ -14,7 +14,7 @@ bidirectional=False
 
 class MulT_TTE(nn.Module):
     def __init__(self, input_dim, seq_input_dim, seq_hidden_dim, seq_layer, bert_hiden_size, pad_token_id,
-                 bert_attention_heads, bert_hidden_layers, decoder_layer, decode_head, num_edges,vocab_size=27300):
+                 bert_attention_heads, bert_hidden_layers, decoder_layer, decode_head,vocab_size=27300):
 
         super(MulT_TTE, self).__init__()
         self.gat_hidden_dim = 128
@@ -27,7 +27,7 @@ class MulT_TTE(nn.Module):
         self.dateembed = nn.Embedding(367, 10)
         self.timeembed = nn.Embedding(1441, 20)
         self.gpsrep = nn.Linear(4, 16)
-        self.relationrep = GAT_Layer(in_channels=num_edges, embedding_dim=64, out_channels=self.gat_hidden_dim, heads=4, dropout=0.1)
+        self.relationrep = GAT_Layer(embedding_dim=64, out_channels=self.gat_hidden_dim, heads=4, dropout=0.1)
         self.timene_dim = 3 + 10 + 20 + bert_hiden_size
 
         self.timene = nn.Sequential(
@@ -86,7 +86,7 @@ class MulT_TTE(nn.Module):
         timene = self.timene(timene_input)+timene_input
         
         ## relation mapping
-        relationrep = self.relationrep(inputs['edgeindex']) # [num_segments, dim]
+        relationrep = self.relationrep(inputs['coords'],inputs['edgeindex']) # [num_segments, dim]
         relationrep = relationrep[inputs['flatten_linkids']]  # [B*T, dim]
         
         B, T = feature.shape[:2]
