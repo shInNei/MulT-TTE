@@ -126,7 +126,7 @@ def MulT_TTE_collate_func(data, args, info_all):
     mask_encoder[mask] = np.concatenate([[1]*k for k in lens])
     return {'links':torch.FloatTensor(padded), 'lens':torch.LongTensor(lens), 'inds': inds, 'mask_label': torch.LongTensor(mask_label),
             "linkindex":torch.LongTensor(linkindex), 'rawlinks': torch.LongTensor(rawlinks),'encoder_attention_mask': torch.LongTensor(mask_encoder),
-            'edgeindex': global_edge_index,'routes':routes_tensor, 'mappings' : mappings, 'segment_lens': segment_lens}, time
+            'edgeindex': global_edge_index,'routes':routes_tensor, 'mappings' : mappings, 'segment_lens': torch.LongTensor(segment_lens)}, time
 
 class BatchSampler:
     def __init__(self, dataset, batch_size):

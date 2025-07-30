@@ -94,9 +94,9 @@ class MulT_TTE(nn.Module):
         
         start = 0
         relation_seq = torch.zeros(B, T, D, dtype=relationrep.dtype, device=relationrep.device)
-        
+        segment_lens = inputs['segment_lens']
         for i in range(B):
-            seg_len = inputs['segment_lens'][i]
+            seg_len = segment_lens[i].item()
             end = start + seg_len
             relation_seq[i, :seg_len, :] = relationrep[start:end]
             start = end
