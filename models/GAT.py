@@ -56,15 +56,20 @@ if __name__ == "__main__":
             inds.append(l[0])
         lens = np.asarray([len(k) for k in linkids], dtype=np.int16)
         routes = []
+        mappings = None
         edge_index = None
         offset = 0
-        for route in linkids:
-            routeset, route_edge_index, _, _ = k_hop_subgraph(
+        global_edge_index = indexinfo 
+        segment_lens = []
+        for idx, route in enumerate(linkids):
+            route = torch.tensor(route).long()
+            routeset, route_edge_index, mapping, _ = k_hop_subgraph(
                 node_idx=route,  # node(s) to center the subgraph on
                 num_hops=2,
-                edge_index=edge_index,  # this MUST be a tensor of shape [2, num_edges]
+                edge_index=global_edge_index,  # this MUST be a tensor of shape [2, num_edges]
                 relabel_nodes=True
-            )            
+            )  
+            assert route.size(0) == mapping.size(0), "Route size and mapping size must match"          
             for segment in routeset:
                 segment = segment.item()
                 start_node,end_node = edgeinfo[segment][2:4]
@@ -76,15 +81,18 @@ if __name__ == "__main__":
                 edge_index = route_edge_index
             else:
                 edge_index = torch.cat([edge_index, route_edge_index + offset], dim=-1)
+            if mappings is None:
+                mappings = mapping
+            else:
+                mappings = torch.cat([mappings, mapping + offset], dim=-1)
                 
             offset += route_edge_index.max().item() + 1
-        
+            segment_lens += [route.size(0)]
         routes_tensor = torch.tensor(routes, dtype=torch.float32)
-        global_edge_index = indexinfo 
         linkids_tensor_list = [torch.tensor(l).long() for l in linkids]
         padded_linkids = pad_sequence(linkids_tensor_list, batch_first=True, padding_value=0)
         flatten_linkids = padded_linkids.flatten()     
-        return {'edgeindex': edge_index,'flatten_linkids': flatten_linkids}, time      
+        return {'edgeindex': edge_index,'routes':routes_tensor,'flatten_linkids': flatten_linkids, 'mappings' : mappings, 'segment_lens': segment_lens}, time      
 
     test_info_all()
     tdata = np.load('mydata/train.npy', allow_pickle=True)
@@ -92,9 +100,23 @@ if __name__ == "__main__":
     loader = DataLoader(Datadict(tdata), batch_sampler=BatchSampler(tdata, 48),
                                        collate_fn=lambda x: collate_fn(x, info_all),
                                        pin_memory=True)
-    model = GAT_Layer(4)
-    features, truth_data  = loader.__iter__().__next__()
-    print(features['edgeindex'].shape)    
+    model = GAT_Layer(6)
+    features, truth_data  = loader.__iter__().__next__()  
+    out = model(features['routes'], features['edgeindex'])
+    out = out[features['mappings']]
+    print(out.shape)
+    B,T = 48, max(features['segment_lens'])
+    print(B,T)
+    D = out.shape[-1]
+    start = 0
+    out_padded = torch.zeros(B, T, D, dtype=out.dtype, device=out.device)
+    for i in range(B):
+        seg_len = features['segment_lens'][i]
+        end = start + seg_len
+        out_padded[i, :seg_len, :] = out[start:end]
+        start = end
+    print(out_padded.shape)
+    # it should go back to B*T*D --> num_segments_in_a_batch, dim --> need to separate and pad
     # global_edge_index = torch.load("mydata/porto_edge_index.pt").long()
     # global_edge_index_moved = global_edge_index + 1
     # dataset = 

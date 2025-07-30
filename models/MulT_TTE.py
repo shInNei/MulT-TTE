@@ -86,14 +86,20 @@ class MulT_TTE(nn.Module):
         timene = self.timene(timene_input)+timene_input
         
         ## relation mapping
-        relationrep = self.relationrep(inputs['coords'],inputs['edgeindex']) # [num_segments, dim]
-        relationrep = relationrep[inputs['flatten_linkids']]  # [B*T, dim]
+        relationrep = self.relationrep(inputs['routes'],inputs['edgeindex']) # [num_segments, dim]
+        relationrep = relationrep[inputs['mappings']]
         
         B, T = feature.shape[:2]
         D = relationrep.shape[-1] 
         
-        # [B*T,dim] -> [B, T, dim]
-        relation_seq = relationrep.view(B, T, D)
+        start = 0
+        relation_seq = torch.zeros(B, T, D, dtype=relationrep.dtype, device=relationrep.device)
+        
+        for i in range(B):
+            seg_len = inputs['segment_lens'][i]
+            end = start + seg_len
+            relation_seq[i, :seg_len, :] = relationrep[start:end]
+            start = end
         
         representation = self.represent(torch.cat([feature[..., 1:3], highwayrep, gpsrep, timene,relation_seq], dim=-1))  # 2,5,16,97        
         

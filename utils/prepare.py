@@ -4,7 +4,7 @@ import pickle
 
 import numpy as np
 import torch
-# from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler
 from torch.nn import SmoothL1Loss, MSELoss
 from torch.utils.data import Dataset
 from torch.utils.data.dataloader import DataLoader
@@ -32,13 +32,45 @@ def MulT_TTE_collate_func(data, args, info_all):
         inds.append(l[0])
     lens = np.asarray([len(k) for k in linkids], dtype=np.int16)
     
-    global_edge_index = indexinfo + 1  # +1 for padding token
-    global_coords_padded = torch.cat([torch.zeros(1,6),coordsinfo], dim=0)  # +1 for padding token
+    global_edge_index = indexinfo
     
-    linkids_tensor_list = [torch.tensor(l).long() + 1 for l in linkids] # +1 for padding token
-    padded_linkids = pad_sequence(linkids_tensor_list, batch_first=True, padding_value=0)
-    flatten_linkids = padded_linkids.flatten()
+    routes = []
+    mappings = None
+    edge_index = None
+    offset = 0
+    global_edge_index = indexinfo 
+    segment_lens = []
     
+    for route in linkids:
+        route = torch.tensor(route).long()
+        routeset, route_edge_index, mapping, _ = k_hop_subgraph(
+            node_idx=route,  # node(s) to center the subgraph on
+            num_hops=2,
+            edge_index=global_edge_index,  # this MUST be a tensor of shape [2, num_edges]
+            relabel_nodes=True
+        )  
+        assert route.size(0) == mapping.size(0), "Route size and mapping size must match"          
+        for segment in routeset:
+            segment = segment.item()
+            start_node,end_node = edgeinfo[segment][2:4]
+            start_coord = nodeinfo[start_node]
+            end_coord = nodeinfo[end_node]
+            routes += [start_coord + end_coord]
+            
+        if edge_index is None:
+            edge_index = route_edge_index
+        else:
+            edge_index = torch.cat([edge_index, route_edge_index + offset], dim=-1)
+        if mappings is None:
+            mappings = mapping
+        else:
+            mappings = torch.cat([mappings, mapping + offset], dim=-1)
+            
+        offset += route_edge_index.max().item() + 1
+        segment_lens += [route.size(0)]
+        
+    routes_tensor = torch.tensor(routes, dtype=torch.float32)
+        
     def info(xs, date):
         infos = []
         length = 0
@@ -94,7 +126,7 @@ def MulT_TTE_collate_func(data, args, info_all):
     mask_encoder[mask] = np.concatenate([[1]*k for k in lens])
     return {'links':torch.FloatTensor(padded), 'lens':torch.LongTensor(lens), 'inds': inds, 'mask_label': torch.LongTensor(mask_label),
             "linkindex":torch.LongTensor(linkindex), 'rawlinks': torch.LongTensor(rawlinks),'encoder_attention_mask': torch.LongTensor(mask_encoder),
-            'edgeindex': global_edge_index,'coords':global_coords_padded,'flatten_linkids': flatten_linkids}, time
+            'edgeindex': global_edge_index,'routes':routes_tensor, 'mappings' : mappings, 'segment_lens': segment_lens}, time
 
 class BatchSampler:
     def __init__(self, dataset, batch_size):
