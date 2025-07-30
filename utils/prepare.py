@@ -4,7 +4,7 @@ import pickle
 
 import numpy as np
 import torch
-from sklearn.preprocessing import StandardScaler
+# from sklearn.preprocessing import StandardScaler
 from torch.nn import SmoothL1Loss, MSELoss
 from torch.utils.data import Dataset
 from torch.utils.data.dataloader import DataLoader
@@ -33,7 +33,6 @@ def MulT_TTE_collate_func(data, args, info_all):
     lens = np.asarray([len(k) for k in linkids], dtype=np.int16)
     
     global_edge_index = indexinfo + 1  # +1 for padding token
-    assert (global_edge_index > 0).all(), "Edge index contains 0 after shifting"
     global_coords_padded = torch.cat([torch.zeros(1,6),coordsinfo], dim=0)  # +1 for padding token
     
     linkids_tensor_list = [torch.tensor(l).long() + 1 for l in linkids] # +1 for padding token

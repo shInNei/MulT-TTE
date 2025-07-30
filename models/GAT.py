@@ -43,7 +43,7 @@ if __name__ == "__main__":
     sys.path.append(project_root)
     from utils.prepare import test_info_all, MulT_TTE_collate_func, Datadict, DataLoader, BatchSampler
     import numpy as np
-    
+    from torch_geometric.utils import k_hop_subgraph
     def collate_fn(data, info_all):
         edgeinfo, nodeinfo, indexinfo, scaler, scaler2 = info_all
         time = torch.Tensor([d[-1] for d in data])
@@ -55,12 +55,36 @@ if __name__ == "__main__":
             dateinfo.append(l[2:5])
             inds.append(l[0])
         lens = np.asarray([len(k) for k in linkids], dtype=np.int16)
+        routes = []
+        edge_index = None
+        offset = 0
+        for route in linkids:
+            routeset, route_edge_index, _, _ = k_hop_subgraph(
+                node_idx=route,  # node(s) to center the subgraph on
+                num_hops=2,
+                edge_index=edge_index,  # this MUST be a tensor of shape [2, num_edges]
+                relabel_nodes=True
+            )            
+            for segment in routeset:
+                segment = segment.item()
+                start_node,end_node = edgeinfo[segment][2:4]
+                start_coord = nodeinfo[start_node]
+                end_coord = nodeinfo[end_node]
+                routes += [start_coord + end_coord]
+                
+            if edge_index is None:
+                edge_index = route_edge_index
+            else:
+                edge_index = torch.cat([edge_index, route_edge_index + offset], dim=-1)
+                
+            offset += route_edge_index.max().item() + 1
         
-        global_edge_index = indexinfo + 1
-        linkids_tensor_list = [torch.tensor(l).long() + 1 for l in linkids] # +1 for padding token
+        routes_tensor = torch.tensor(routes, dtype=torch.float32)
+        global_edge_index = indexinfo 
+        linkids_tensor_list = [torch.tensor(l).long() for l in linkids]
         padded_linkids = pad_sequence(linkids_tensor_list, batch_first=True, padding_value=0)
         flatten_linkids = padded_linkids.flatten()     
-        return {'edgeindex': global_edge_index,'flatten_linkids': flatten_linkids, 'linkids_coord': linkids_coord}, time      
+        return {'edgeindex': edge_index,'flatten_linkids': flatten_linkids}, time      
 
     test_info_all()
     tdata = np.load('mydata/train.npy', allow_pickle=True)
@@ -70,8 +94,7 @@ if __name__ == "__main__":
                                        pin_memory=True)
     model = GAT_Layer(4)
     features, truth_data  = loader.__iter__().__next__()
-    out = model()
-    
+    print(features['edgeindex'].shape)    
     # global_edge_index = torch.load("mydata/porto_edge_index.pt").long()
     # global_edge_index_moved = global_edge_index + 1
     # dataset = 
