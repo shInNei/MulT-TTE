@@ -4,7 +4,7 @@ import pickle
 
 import numpy as np
 import torch
-# from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler
 from torch.nn import SmoothL1Loss, MSELoss
 from torch.utils.data import Dataset
 from torch.utils.data.dataloader import DataLoader
