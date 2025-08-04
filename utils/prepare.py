@@ -53,7 +53,7 @@ def MulT_TTE_collate_func(data, args, info_all):
             edge_index=global_edge_index,  # this MUST be a tensor of shape [2, num_edges]
             relabel_nodes=True
         )
-        assert edge_index.max().item() < routeset.size(0), \
+        assert route_edge_index.max().item() < routeset.size(0), \
             f"Invalid edge_index: max {edge_index.max().item()} >= x.size(0) {routeset.size(0)}"
 
         assert route.size(0) == mapping.size(0), "Route size and mapping size must match"          
