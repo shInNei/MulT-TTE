@@ -34,9 +34,9 @@ def MulT_TTE_collate_func(data, args, info_all):
     
     global_edge_index = indexinfo
     
-    routes = []
-    mappings = None
-    edge_index = None
+    routes_coords = []
+    mappings = []
+    edge_index_list = []
     offset = 0
     global_edge_index = indexinfo 
     segment_lens = []
@@ -53,30 +53,30 @@ def MulT_TTE_collate_func(data, args, info_all):
             edge_index=global_edge_index,  # this MUST be a tensor of shape [2, num_edges]
             relabel_nodes=True
         )
-        assert route_edge_index.max().item() < routeset.size(0), \
-            f"Invalid edge_index: max {edge_index.max().item()} >= x.size(0) {routeset.size(0)}"
 
-        assert route.size(0) == mapping.size(0), "Route size and mapping size must match"          
+        assert route.size(0) == mapping.size(0), "Route size and mapping size must match"   
+        
+        sub_node_coords = []       
         for segment in routeset:
             segment = segment.item()
             start_node,end_node = edgeinfo[segment][2:4]
             start_coord = nodeinfo[start_node]
             end_coord = nodeinfo[end_node]
-            routes += [start_coord + end_coord]
-            
-        if edge_index is None:
-            edge_index = route_edge_index
-        else:
-            edge_index = torch.cat([edge_index, route_edge_index + offset], dim=-1)
-        if mappings is None:
-            mappings = mapping
-        else:
-            mappings = torch.cat([mappings, mapping + offset], dim=-1)
-            
-        offset += route_edge_index.max().item() + 1
-        segment_lens += [route.size(0)]
+            sub_node_coords.append(start_coord + end_coord)
+        routes_coords.append(torch.tensor(sub_node_coords, dtype=torch.float32))
+                 
+        adjusted_route_edge_index = route_edge_index + offset
+        edge_index_list.append(adjusted_route_edge_index)
         
-    routes_tensor = torch.tensor(routes, dtype=torch.float32)
+        adjusted_mapping = mapping + offset
+        mappings.append(adjusted_mapping)
+        
+        offset += routeset.size(0)
+        segment_lens.append(routeset.size(0))
+    
+    routes_tensor = torch.cat(routes_coords, dim=0)
+    edge_index_tensor = torch.cat(edge_index_list, dim=-1)
+    mappings_tensor = torch.cat(mappings, dim=-1)
         
     def info(xs, date):
         infos = []
@@ -133,7 +133,7 @@ def MulT_TTE_collate_func(data, args, info_all):
     mask_encoder[mask] = np.concatenate([[1]*k for k in lens])
     return {'links':torch.FloatTensor(padded), 'lens':torch.LongTensor(lens), 'inds': inds, 'mask_label': torch.LongTensor(mask_label),
             "linkindex":torch.LongTensor(linkindex), 'rawlinks': torch.LongTensor(rawlinks),'encoder_attention_mask': torch.LongTensor(mask_encoder),
-            'edgeindex': global_edge_index,'routes':routes_tensor, 'mappings' : mappings, 'segment_lens': torch.LongTensor(segment_lens)}, time
+            'edgeindex': edge_index_tensor,'routes':routes_tensor, 'mappings' : mappings_tensor, 'segment_lens': torch.LongTensor(segment_lens)}, time
 
 class BatchSampler:
     def __init__(self, dataset, batch_size):
