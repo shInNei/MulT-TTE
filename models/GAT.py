@@ -55,44 +55,51 @@ if __name__ == "__main__":
             dateinfo.append(l[2:5])
             inds.append(l[0])
         lens = np.asarray([len(k) for k in linkids], dtype=np.int16)
-        routes = []
-        mappings = None
-        edge_index = None
+        
+        routes_coords = []
+        mappings = []
+        edge_index_list = []
         offset = 0
         global_edge_index = indexinfo 
         segment_lens = []
-        for idx, route in enumerate(linkids):
+        
+        for route in linkids:
             route = torch.tensor(route).long()
+            # route --> tensor of 1 route
+            # routeset --> k_hop of 1 route
+            # route_edge_index --> local map edge_index [0..N-1]
+            # mapping --> index of route in newly create route_edge_index#
             routeset, route_edge_index, mapping, _ = k_hop_subgraph(
                 node_idx=route,  # node(s) to center the subgraph on
                 num_hops=2,
                 edge_index=global_edge_index,  # this MUST be a tensor of shape [2, num_edges]
                 relabel_nodes=True
-            )  
-            assert route.size(0) == mapping.size(0), "Route size and mapping size must match"          
+            )
+
+            assert route.size(0) == mapping.size(0), "Route size and mapping size must match"   
+            
+            sub_node_coords = []       
             for segment in routeset:
                 segment = segment.item()
                 start_node,end_node = edgeinfo[segment][2:4]
                 start_coord = nodeinfo[start_node]
                 end_coord = nodeinfo[end_node]
-                routes += [start_coord + end_coord]
-                
-            if edge_index is None:
-                edge_index = route_edge_index
-            else:
-                edge_index = torch.cat([edge_index, route_edge_index + offset], dim=-1)
-            if mappings is None:
-                mappings = mapping
-            else:
-                mappings = torch.cat([mappings, mapping + offset], dim=-1)
-                
-            offset += route_edge_index.max().item() + 1
-            segment_lens += [route.size(0)]
-        routes_tensor = torch.tensor(routes, dtype=torch.float32)
-        linkids_tensor_list = [torch.tensor(l).long() for l in linkids]
-        padded_linkids = pad_sequence(linkids_tensor_list, batch_first=True, padding_value=0)
-        flatten_linkids = padded_linkids.flatten()     
-        return {'edgeindex': edge_index,'routes':routes_tensor,'flatten_linkids': flatten_linkids, 'mappings' : mappings, 'segment_lens': segment_lens}, time      
+                sub_node_coords.append(start_coord + end_coord)
+            routes_coords.append(torch.tensor(sub_node_coords, dtype=torch.float32))
+                    
+            adjusted_route_edge_index = route_edge_index + offset
+            edge_index_list.append(adjusted_route_edge_index)
+            
+            adjusted_mapping = mapping + offset
+            mappings.append(adjusted_mapping)
+            
+            offset += routeset.size(0)
+            segment_lens.append(mapping.size(0))
+        
+        routes_tensor = torch.cat(routes_coords, dim=0)
+        edge_index_tensor = torch.cat(edge_index_list, dim=-1)
+        mappings_tensor = torch.cat(mappings, dim=-1)    
+        return {'edgeindex': edge_index_tensor,'routes':routes_tensor,'mappings' : mappings_tensor, 'segment_lens': segment_lens}, time      
 
     test_info_all()
     tdata = np.load('mydata/train.npy', allow_pickle=True)
@@ -102,6 +109,8 @@ if __name__ == "__main__":
                                        pin_memory=True)
     model = GAT_Layer(6)
     features, truth_data  = loader.__iter__().__next__()  
+    print(features['routes'])
+    print(features['edgeindex'])
     out = model(features['routes'], features['edgeindex'])
     out = out[features['mappings']]
     print(out.shape)
@@ -113,6 +122,7 @@ if __name__ == "__main__":
     for i in range(B):
         seg_len = features['segment_lens'][i]
         end = start + seg_len
+        print(f"Segment {i}: start={start}, end={end}, seg_len={seg_len}, actual_len={end-start}")
         out_padded[i, :seg_len, :] = out[start:end]
         start = end
     print(out_padded.shape)

@@ -4,7 +4,7 @@ import pickle
 
 import numpy as np
 import torch
-from sklearn.preprocessing import StandardScaler
+# from sklearn.preprocessing import StandardScaler
 from torch.nn import SmoothL1Loss, MSELoss
 from torch.utils.data import Dataset
 from torch.utils.data.dataloader import DataLoader
@@ -72,7 +72,7 @@ def MulT_TTE_collate_func(data, args, info_all):
         mappings.append(adjusted_mapping)
         
         offset += routeset.size(0)
-        segment_lens.append(routeset.size(0))
+        segment_lens.append(mapping.size(0))
     
     routes_tensor = torch.cat(routes_coords, dim=0)
     edge_index_tensor = torch.cat(edge_index_list, dim=-1)
