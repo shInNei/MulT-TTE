@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from torch import nn, optim
 from torch.utils.data import DataLoader
-from tqdm import tqdm
+from tqdm.auto import tqdm
 
 from utils.metric import calculate_metrics
 from utils.util import save_model, to_var

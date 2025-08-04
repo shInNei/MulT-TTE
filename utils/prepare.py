@@ -43,12 +43,19 @@ def MulT_TTE_collate_func(data, args, info_all):
     
     for route in linkids:
         route = torch.tensor(route).long()
+        # route --> tensor of 1 route
+        # routeset --> k_hop of 1 route
+        # route_edge_index --> local map edge_index [0..N-1]
+        # mapping --> index of route in newly create route_edge_index#
         routeset, route_edge_index, mapping, _ = k_hop_subgraph(
             node_idx=route,  # node(s) to center the subgraph on
             num_hops=2,
             edge_index=global_edge_index,  # this MUST be a tensor of shape [2, num_edges]
             relabel_nodes=True
-        )  
+        )
+        assert edge_index.max().item() < routeset.size(0), \
+            f"Invalid edge_index: max {edge_index.max().item()} >= x.size(0) {routeset.size(0)}"
+
         assert route.size(0) == mapping.size(0), "Route size and mapping size must match"          
         for segment in routeset:
             segment = segment.item()

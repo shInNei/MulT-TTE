@@ -19,11 +19,11 @@ class GAT_Layer(nn.Module):
         self.gat_2 = GATConv(out_channels, out_channels, heads=1, dropout=dropout)
         self.dropout = nn.Dropout(dropout)
 
-    def forward(self,x,edge_index): # x is global coordinates, edge_index is global edge index
+    def forward(self,x,edge_index):
         x_linear = self.linear(x) # [B,embedding_dim]
         
         x_gat1 = self.gat_1(x_linear, edge_index)
-        # x_cat = torch.cat([x_embed,x_gat1], dim=-1)
+
         x_gat1 = F.leaky_relu(x_gat1)
         x_gat1 = self.dropout(x_gat1)
         
@@ -32,7 +32,7 @@ class GAT_Layer(nn.Module):
         out = self.dropout(out)
         
         return out
-
+    
 if __name__ == "__main__":
     import sys
     import os
