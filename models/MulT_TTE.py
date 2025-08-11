@@ -5,16 +5,40 @@ from torch import nn
 import torch.nn.functional as F
 
 from models.LayerNormGRU import LayerNormGRU
+from models.Discriminator import Discriminator
 from transformers import BertConfig, BertForMaskedLM
 
 batch_first=False
 bidirectional=False
-
 class MulT_TTE(nn.Module):
     def __init__(self, input_dim, seq_input_dim, seq_hidden_dim, seq_layer, bert_hiden_size, pad_token_id,
-                 bert_attention_heads, bert_hidden_layers, decoder_layer, decode_head, vocab_size=27300):
+                 bert_attention_heads, bert_hidden_layers, decoder_layer, decode_head, discriminator_dim=64,vocab_size=27300):
+        super().__init__()
+        self.regressor = Regressor(input_dim, seq_input_dim, seq_hidden_dim, seq_layer, bert_hiden_size, pad_token_id,
+                 bert_attention_heads, bert_hidden_layers, decoder_layer, decode_head,vocab_size)
+        self.discriminator = Discriminator(seq_hidden_dim + 1, seq_layer,discriminator_dim)
+        self.bce_loss = nn.BCEWithLogitsLoss()
+        
+    def forward(self, inputs, args):
+        output, representation, loss1 = self.regressor(inputs, args)
+        lens = inputs['lens']
+        out_fake, out_real = self.discriminator(representation,output, args['real_time'], lens.long())
+        
+        loss_real = nn.BCEWithLogitsLoss(out_real, torch.ones_like(out_real, device = out_real.device))
+        loss_fake = nn.BCEWithLogitsLoss(out_fake, torch.zeros_like(out_fake, device = out_fake.device))
+        
+        loss_D = (loss_real + loss_fake) / 2
+        
+        #adversarial
+        loss_fake_R = self.bce_loss(out_fake, torch.ones_like(out_fake, deivce = out_fake.device))
+        
+        return output, loss1, loss_D, loss_fake_R
+        
+class Regressor(nn.Module):
+    def __init__(self, input_dim, seq_input_dim, seq_hidden_dim, seq_layer, bert_hiden_size, pad_token_id,
+                 bert_attention_heads, bert_hidden_layers, decoder_layer, decode_head, discriminator_dim=64,vocab_size=27300):
 
-        super(MulT_TTE, self).__init__()
+        super().__init__()
         self.bert_config = BertConfig(num_attention_heads = bert_attention_heads, hidden_size = bert_hiden_size, pad_token_id=pad_token_id,
                                       vocab_size=vocab_size, num_hidden_layers = bert_hidden_layers)
         self.seg_embedding_learning = BertForMaskedLM(self.bert_config)
@@ -37,7 +61,7 @@ class MulT_TTE(nn.Module):
             nn.LeakyReLU(),
             nn.Linear(seq_input_dim, seq_input_dim)
         )
-
+        # multi-faceted Sequential Encoder for regressor
         self.sequence = LayerNormGRU(seq_input_dim, seq_hidden_dim, seq_layer)
 
         self.seq_hidden_dim = seq_hidden_dim * 2 if bidirectional else seq_hidden_dim
@@ -79,7 +103,8 @@ class MulT_TTE(nn.Module):
 
         timene_input = torch.cat([self.seg_embedding_learning.bert.embeddings.word_embeddings(inputs['rawlinks']), datetimerep], dim=-1)
         timene = self.timene(timene_input)+timene_input
-        representation = self.represent(torch.cat([feature[..., 1:3], highwayrep, gpsrep, timene], dim=-1))  # 2,5,16,97
+        features = torch.cat([feature[..., 1:3], highwayrep, gpsrep, timene], dim=-1)
+        representation = self.represent(features)  # 2,5,16,97
 
         representation = representation if batch_first else representation.transpose(0, 1).contiguous()
         hiddens, rnn_states = self.sequence(representation, seq_lens=lens.long())
@@ -91,6 +116,7 @@ class MulT_TTE(nn.Module):
         hidden = F.leaky_relu(self.input2hid(pooled_hidden))
         output = self.hid2out(hidden)
         output = args.scaler.inverse_transform(output)
+        
         return output, loss_1
 
 

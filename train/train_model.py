@@ -14,10 +14,11 @@ from utils.util import save_model, to_var
 
 
 def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
-                loss_func: callable, optimizer: optim,
+                loss_func: callable, optimizer_R: optim, optimizer_D: optim,
                 model_folder: str, args, start_epoch=-1, **kwargs):
     num_epochs = args.epochs
     beta = args.beta
+    theta = args.theta
     phases = ['train', 'val', 'test']
     since = time.perf_counter()
 
@@ -25,9 +26,12 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
         f.write(str(model))
         f.write("\n\n")
 
-    save_dict, best_mae = {'model_state_dict': copy.deepcopy(model.state_dict()), 'epoch': 0}, 10000
-
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=.2, patience=2,
+    save_dict, best_mae = {'R_state_dict': copy.deepcopy(model.regressor.state_dict()),
+                           'D_state_dict': copy.deepcopy(model.discriminator.state_dict()), 
+                           'epoch': 0
+                           }, 10000
+    
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer_R, mode='min', factor=.2, patience=2,
                                                      threshold=1e-2, threshold_mode='rel', min_lr=1e-7, verbose=True)
 
     try:
@@ -47,21 +51,30 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                     features = to_var(features, args.device)
                     targets.append(truth_data.numpy())
                     truth_data = to_var(truth_data, args.device)
-                    optimizer.zero_grad()
+                    
+                    args['real_time'] = truth_data
                     with torch.set_grad_enabled(phase == 'train'):
-
-                        outputs, loss_1 = model(features, args)
+                        outputs, loss_1, loss_D, loss_fake_R = model(features, args)
+                        
                         loss_2 = loss_func(truth=truth_data, predict=outputs)
-                        loss = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2
+                        loss = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2 + theta * loss_fake_R
 
                         tqdm_loader.set_description(
                             f'{phase} epoch: {epoch}, {phase} loss: {(running_loss[phase] / steps) :.8f}, '
-                            f'loss1: {loss_1.item()}, loss2: {loss_2.item()}')
+                            f'loss1: {loss_1.item()}, loss2: {loss_2.item()}, discriminator loss: {loss_D.item()}')
 
                         if phase == 'train':
+                            # train regressor
+                            optimizer_R.zero_grad()
                             loss.backward()
-                            torch.nn.utils.clip_grad.clip_grad_norm_(model.parameters(), 50)  # after 50  # 20效果不佳，无法达到最优
-                            optimizer.step()
+                            torch.nn.utils.clip_grad.clip_grad_norm_(model.regressor.parameters(), 50)  # after 50  # 20效果不佳，无法达到最优
+                            optimizer_R.step()
+                            
+                            # train discriminator
+                            optimizer_D.zero_grad()
+                            loss_D.backward()
+                            torch.nn.utils.clip_grad.clip_grad_norm_(model.discriminator.parameters(), 50)
+                            optimizer_D.step()
 
                     with torch.no_grad():
                         predictions.append(outputs.cpu().detach().numpy())
@@ -88,10 +101,13 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                 if phase == 'val':
                     if scores['MAE'] < best_mae:
                         best_mae = scores['MAE']
-                        save_dict.update(model_state_dict=copy.deepcopy(model.state_dict()),
+                        save_dict.update(R_state_dict=copy.deepcopy(model.regressor.state_dict()),
+                                         D_state_dict=copy.deepcopy(model.discriminator.state_dict()),
                                          epoch=epoch,
-                                         optimizer_state_dict=copy.deepcopy(optimizer.state_dict()))
+                                         optimizer_R_state_dict=copy.deepcopy(optimizer_R.state_dict()),
+                                         optimizer_D_state_dict=copy.deepcopy(optimizer_D.state_dict()))
                         save_model(f"{model_folder}/best_model.pkl", **save_dict)
+                        
                         patiance = 0
                     else:
                         patiance += 1
@@ -108,6 +124,9 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
 
         save_model(f"{model_folder}/best_model.pkl", **save_dict)
         save_model(f"{model_folder}/final_model.pkl",
-                   **{'model_state_dict': copy.deepcopy(model.state_dict()),
+                   **{'R_state_dict': copy.deepcopy(model.regressor.state_dict()),
+                      'D_state_dict': copy.deepcopy(model.discriminator.state_dict()),
                       'epoch': epoch,
-                      'optimizer_state_dict': copy.deepcopy(optimizer.state_dict())})
+                      'optimizer_state_dict': copy.deepcopy(optimizer_R.state_dict()),
+                      'optimizer_D_state_dict': copy.deepcopy(optimizer_D.state_dict())
+                      })

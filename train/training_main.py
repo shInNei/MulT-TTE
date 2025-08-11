@@ -78,24 +78,27 @@ def train_main(args):
         os.makedirs(model_folder, exist_ok=True)
 
         if args.optim == "Adam":
-            optimizer = optim.Adam(model.parameters(), lr=args.lr)
+            optimizer_R = optim.Adam(model.regressor.parameters(), lr=args.lr)
+            optimizer_D = optim.Adam(model.discriminator.parameters(), lr=args.lr)
         else:
             raise NotImplementedError()
 
         train_model(model=model, data_loaders=data_loaders,
-                    loss_func=loss_func, optimizer=optimizer,
+                    loss_func=loss_func, optimizer_R=optimizer_R, optimizer_D=optimizer_D,
                     model_folder=model_folder, args=args)
     elif args.mode == 'resume':
         if args.optim == "Adam":
-            optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+            optimizer_R = optim.Adam(model.regressor.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+            optimizer_D = optim.Adam(model.discriminator.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         else:
             raise NotImplementedError()
         final_model = torch.load(os.path.join(model_folder, 'final_model.pkl'), map_location=args.device)
         start_epoch = final_model['epoch']
         model.load_state_dict(final_model['model_state_dict'], strict=False)
-        optimizer.load_state_dict(final_model['optimizer_state_dict'])
+        optimizer_R.load_state_dict(final_model['optimizer_R_state_dict'])
+        optimizer_D.load_state_dict(final_model['optimizer_D_state_dict'])
         train_model(model=model, data_loaders=data_loaders,
-                    loss_func=loss_func, optimizer=optimizer,
+                    loss_func=loss_func, optimizer_R=optimizer_R, optimizer_D=optimizer_D,
                     model_folder=model_folder, args=args, start_epoch=start_epoch)
     print(args.loss)
     print(args.model_config)

@@ -50,6 +50,7 @@ optional arguments:
                         input the max epochs
   -b BETA, --beta BETA  intput the learning preference between MSG and TTE
                         (the bigger the value, the more preference for TTE.)
+  -t THETA, --theta THETA
   -l LR, --lr LR        intput the initial learning rate
   -w WEIGHT_DECAY, --weight_decay WEIGHT_DECAY
                         intput the weight decay of optimization
