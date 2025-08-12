@@ -34,8 +34,8 @@ class Discriminator(nn.Module):
         t_fake_tensor = t_fake.unsqueeze(-1) # [batch_size, 1, 1]
         t_fake_tensor = t_fake_tensor.expand(-1,spation_temporal_features.size(1),-1) # [batch_size, seq_len, 1]
         assert t_fake_tensor.dim() == 3, f"Expected 3D tensor, got {t_real_tensor.shape} tensor"
-        t_real_tensor = t_real.unsqueeze(-1) # [batch_size, 1, 1]
-        print(t_real_tensor)
+        t_real_tensor = t_real.unsqueeze(-1).unsqueeze(-1) # [batch_size, 1, 1]
+        # print(t_real_tensor)
         assert t_real_tensor.dim() == 3, f"Expected 3D tensor, got {t_real_tensor.shape} tensor"
         t_real_tensor = t_real_tensor.expand(-1,spation_temporal_features.size(1),-1) # [batch_size, seq_len, 1]
         
