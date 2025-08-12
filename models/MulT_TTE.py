@@ -22,7 +22,7 @@ class MulT_TTE(nn.Module):
     def forward(self, inputs, args):
         output, representation, loss1 = self.regressor(inputs, args)
         lens = inputs['lens']
-        out_fake, out_real = self.discriminator(representation,output, args['real_time'], lens.long())
+        out_fake, out_real = self.discriminator(representation,output, args.real_time, lens.long())
         
         loss_real = nn.BCEWithLogitsLoss(out_real, torch.ones_like(out_real, device = out_real.device))
         loss_fake = nn.BCEWithLogitsLoss(out_fake, torch.zeros_like(out_fake, device = out_fake.device))
