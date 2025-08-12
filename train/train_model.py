@@ -62,7 +62,7 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                     targets.append(truth_data.numpy())
                     truth_data = to_var(truth_data, args.device)
                     
-                    args['real_time'] = truth_data
+                    args.real_time   = truth_data
                     
                     if phase == 'train':
                         ### train regressor
