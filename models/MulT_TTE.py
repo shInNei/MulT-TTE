@@ -16,7 +16,7 @@ class MulT_TTE(nn.Module):
         super().__init__()
         self.regressor = Regressor(input_dim, seq_input_dim, seq_hidden_dim, seq_layer, bert_hiden_size, pad_token_id,
                  bert_attention_heads, bert_hidden_layers, decoder_layer, decode_head,vocab_size)
-        self.discriminator = Discriminator(seq_hidden_dim + 1, seq_layer,discriminator_dim)
+        self.discriminator = Discriminator(seq_input_dim,seq_hidden_dim, seq_layer,discriminator_dim)
         self.bce_loss = nn.BCEWithLogitsLoss()
         
     def forward(self, inputs, args):
