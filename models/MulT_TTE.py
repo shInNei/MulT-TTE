@@ -30,7 +30,7 @@ class MulT_TTE(nn.Module):
         loss_D = (loss_real + loss_fake) / 2
         
         #adversarial
-        loss_fake_R = self.bce_loss(out_fake, torch.ones_like(out_fake, deivce = out_fake.device))
+        loss_fake_R = self.bce_loss(out_fake, torch.ones_like(out_fake, device = out_fake.device))
         
         return output, loss1, loss_D, loss_fake_R
         

@@ -93,36 +93,39 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                     else:
                         with torch.no_grad():
                             output, loss_1, loss_D, loss_fake_R = model(features,args)
-                    
+                            loss_2 = loss_func(truth=truth_data, predict=output)
+                            loss = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2 + theta * loss_fake_R
+
+                            
                     tqdm_loader.set_description(
                             f'{phase} epoch: {epoch}, {phase} loss: {(running_loss[phase] / steps) :.8f}, '
-                            f'loss1: {loss_1.item()}, loss2: {loss_2.item()}, {f'D loss: {loss_D.item()}' if epoch % 2 == 0 else ''}'
+                            f'loss1: {loss_1.item()}, loss2: {loss_2.item()}, {f'D loss: {loss_D.item()}' if not (phase == 'train' and epoch % 2 == 0) else ''}'
                             )
                         
                         
-                    with torch.set_grad_enabled(phase == 'train'):
-                        outputs, loss_1, loss_D, loss_fake_R = model(features, args)
+                    # with torch.set_grad_enabled(phase == 'train'):
+                    #     outputs, loss_1, loss_D, loss_fake_R = model(features, args)
                         
-                        loss_2 = loss_func(truth=truth_data, predict=outputs)
-                        loss = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2 + theta * loss_fake_R
+                    #     loss_2 = loss_func(truth=truth_data, predict=outputs)
+                    #     loss = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2 + theta * loss_fake_R
 
-                        tqdm_loader.set_description(
-                            f'{phase} epoch: {epoch}, {phase} loss: {(running_loss[phase] / steps) :.8f}, '
-                            f'loss1: {loss_1.item()}, loss2: {loss_2.item()}, discriminator loss: {loss_D.item()}')
+                    #     tqdm_loader.set_description(
+                    #         f'{phase} epoch: {epoch}, {phase} loss: {(running_loss[phase] / steps) :.8f}, '
+                    #         f'loss1: {loss_1.item()}, loss2: {loss_2.item()}, discriminator loss: {loss_D.item()}')
 
-                        if phase == 'train':
-                            # train regressor
-                            optimizer_R.zero_grad()
-                            loss.backward(retain_graph=train_discriminator)
-                            torch.nn.utils.clip_grad.clip_grad_norm_(model.regressor.parameters(), 50)  # after 50  # 20效果不佳，无法达到最优
-                            optimizer_R.step()
+                    #     if phase == 'train':
+                    #         # train regressor
+                    #         optimizer_R.zero_grad()
+                    #         loss.backward(retain_graph=train_discriminator)
+                    #         torch.nn.utils.clip_grad.clip_grad_norm_(model.regressor.parameters(), 50)  # after 50  # 20效果不佳，无法达到最优
+                    #         optimizer_R.step()
                             
-                            # train discriminator
-                            if train_discriminator:
-                                optimizer_D.zero_grad()
-                                loss_D.backward()
-                                torch.nn.utils.clip_grad.clip_grad_norm_(model.discriminator.parameters(), 50)
-                                optimizer_D.step()
+                    #         # train discriminator
+                    #         if train_discriminator:
+                    #             optimizer_D.zero_grad()
+                    #             loss_D.backward()
+                    #             torch.nn.utils.clip_grad.clip_grad_norm_(model.discriminator.parameters(), 50)
+                    #             optimizer_D.step()
 
                     with torch.no_grad():
                         predictions.append(outputs.cpu().detach().numpy())

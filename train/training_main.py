@@ -94,7 +94,8 @@ def train_main(args):
             raise NotImplementedError()
         final_model = torch.load(os.path.join(model_folder, 'final_model.pkl'), map_location=args.device)
         start_epoch = final_model['epoch']
-        model.load_state_dict(final_model['model_state_dict'], strict=False)
+        model.regressor.load_state_dict(final_model['R_state_dict'], strict=False)
+        model.discriminator.load_state_dict(final_model['D_state_dict'], strict=False)
         optimizer_R.load_state_dict(final_model['optimizer_R_state_dict'])
         optimizer_D.load_state_dict(final_model['optimizer_D_state_dict'])
         train_model(model=model, data_loaders=data_loaders,
