@@ -12,7 +12,10 @@ from tqdm import tqdm
 from utils.metric import calculate_metrics
 from utils.util import save_model, to_var
 
-
+def set_requires_grad(module, flag: bool):
+    for p in module.parameters():
+        p.requires_grad = flag
+        
 def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                 loss_func: callable, optimizer_R: optim, optimizer_D: optim,
                 model_folder: str, args, start_epoch=-1, **kwargs):
@@ -39,13 +42,20 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
         for epoch in range(start_epoch + 1, num_epochs):
             running_loss = {phase: 0.0 for phase in phases}
             msg = []
+            # freeze/unfreeze modules
+            train_discriminator = (epoch % 2 == 0)
+            set_requires_grad(model.regressor, True)
+            set_requires_grad(model.discriminator, train_discriminator)
+            # training/val/test loop
             for phase in phases:
                 if phase == 'train':
                     model.train()
                 else:
                     model.eval()
+                    
                 steps, predictions, targets = 0, list(), list()
                 tqdm_loader = tqdm(data_loaders[phase],mininterval=3)
+                
                 for step, (features, truth_data) in enumerate(tqdm_loader):
                     steps += truth_data.size(0)
                     features = to_var(features, args.device)
@@ -53,6 +63,43 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                     truth_data = to_var(truth_data, args.device)
                     
                     args['real_time'] = truth_data
+                    
+                    if phase == 'train':
+                        ### train regressor
+                        set_requires_grad(model.regressor, True)
+                        set_requires_grad(model.discriminator, False)
+                        
+                        optimizer_R.zero_grad()
+                        
+                        outputs, loss_1, _, loss_fake_R = model(features,args)
+                        loss_2 = loss_func(truth=truth_data, predict=outputs)
+                        loss = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2 + theta * loss_fake_R
+                        
+                        loss.backward()
+                        torch.nn.utils.clip_grad.clip_grad_norm_(model.regressor.parameters(), 50)  # after 50  # 20效果不佳，无法达到最优
+                        optimizer_R.step()
+                        
+                        if epoch % 2 == 0:
+                            set_requires_grad(model.regressor, False)
+                            set_requires_grad(model.discriminator, True)
+                            
+                            optimizer_D.zero_grad()
+                            
+                            _,_,loss_D,_ = model(features, args)
+                            
+                            loss_D.backward()
+                            torch.nn.utils.clip_grad.clip_grad_norm_(model.discriminator.parameters(), 50)  # after 50  # 20效果不佳，无法达到最优
+                            optimizer_D.step()
+                    else:
+                        with torch.no_grad():
+                            output, loss_1, loss_D, loss_fake_R = model(features,args)
+                    
+                    tqdm_loader.set_description(
+                            f'{phase} epoch: {epoch}, {phase} loss: {(running_loss[phase] / steps) :.8f}, '
+                            f'loss1: {loss_1.item()}, loss2: {loss_2.item()}, {f'D loss: {loss_D.item()}' if epoch % 2 == 0 else ''}'
+                            )
+                        
+                        
                     with torch.set_grad_enabled(phase == 'train'):
                         outputs, loss_1, loss_D, loss_fake_R = model(features, args)
                         
@@ -66,15 +113,16 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                         if phase == 'train':
                             # train regressor
                             optimizer_R.zero_grad()
-                            loss.backward()
+                            loss.backward(retain_graph=train_discriminator)
                             torch.nn.utils.clip_grad.clip_grad_norm_(model.regressor.parameters(), 50)  # after 50  # 20效果不佳，无法达到最优
                             optimizer_R.step()
                             
                             # train discriminator
-                            optimizer_D.zero_grad()
-                            loss_D.backward()
-                            torch.nn.utils.clip_grad.clip_grad_norm_(model.discriminator.parameters(), 50)
-                            optimizer_D.step()
+                            if train_discriminator:
+                                optimizer_D.zero_grad()
+                                loss_D.backward()
+                                torch.nn.utils.clip_grad.clip_grad_norm_(model.discriminator.parameters(), 50)
+                                optimizer_D.step()
 
                     with torch.no_grad():
                         predictions.append(outputs.cpu().detach().numpy())
