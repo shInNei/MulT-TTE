@@ -31,10 +31,10 @@ class Discriminator(nn.Module):
         # spatiotemporal_features: [batch_size, seq_len, input_dim]
         spation_temporal_features, _ = self.sequence(features,seq_len)
         
-        t_fake_tensor = t_fake.unsqueeze(-1).unsqueeze(1) # [batch_size, 1, 1]
+        t_fake_tensor = t_fake.unsqueeze(-1) # [batch_size, 1, 1]
         t_fake_tensor = t_fake_tensor.expand(-1,spation_temporal_features.size(1),-1) # [batch_size, seq_len, 1]
         
-        t_real_tensor = t_real.unsqueeze(-1).unsqueeze(1) # [batch_size, 1, 1]
+        t_real_tensor = t_real.unsqueeze(-1) # [batch_size, 1, 1]
         t_real_tensor = t_real_tensor.expand(-1,spation_temporal_features.size(1),-1) # [batch_size, seq_len, 1]
         
         classifier_fake_in = torch.concat([spation_temporal_features, t_fake_tensor], dim=-1) # [batch_size, seq_len, input_dim + 1]
