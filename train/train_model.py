@@ -99,7 +99,7 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                             
                     tqdm_loader.set_description(
                             f'{phase} epoch: {epoch}, {phase} loss: {(running_loss[phase] / steps) :.8f}, '
-                            f'loss1: {loss_1.item()}, loss2: {loss_2.item()}, {f'D loss: {loss_D.item()}' if not (phase == 'train' and epoch % 2 == 0) else ''}'
+                            f'loss1: {loss_1.item()}, loss2: {loss_2.item()}, {f"D loss: {loss_D.item()}" if not (phase == "train" and epoch % 2 == 0) else ""}'
                             )
                         
                         
