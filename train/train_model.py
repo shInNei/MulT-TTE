@@ -97,10 +97,12 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                             loss = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2 + theta * loss_fake_R
 
                             
+                    d_loss_str = f"D loss: {loss_D.item()}" if not (phase == "train" and epoch % 2 == 0) else ""
+                    desc = f"loss1: {loss_1.item()}, loss2: {loss_2.item()}, {d_loss_str}"
                     tqdm_loader.set_description(
-                            f'{phase} epoch: {epoch}, {phase} loss: {(running_loss[phase] / steps) :.8f}, '
-                            f'loss1: {loss_1.item()}, loss2: {loss_2.item()}, {f"D loss: {loss_D.item()}" if not (phase == "train" and epoch % 2 == 0) else ""}'
-                            )
+                        f'{phase} epoch: {epoch}, {phase} loss: {(running_loss[phase] / steps) :.8f}, '
+                        + desc
+                    )
                         
                         
                     # with torch.set_grad_enabled(phase == 'train'):
