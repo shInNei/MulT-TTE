@@ -1,11 +1,7 @@
-import copy
-import math
 import torch
 from torch import nn
-import torch.nn.functional as F
 
-from transformers import BertConfig, BertForMaskedLM
-from LayerNormGRU import LayerNormGRU
+from models.LayerNormGRU import LayerNormGRU
 class Discriminator(nn.Module):
     def __init__(self, input_dim,seq_hidden_dim,seq_layer,classifier_hidden_dim):
         ...
