@@ -29,18 +29,20 @@ class Discriminator(nn.Module):
         
     def forward(self,features, t_fake: torch.Tensor,t_real, seq_len=None):
         # spatiotemporal_features: [batch_size, seq_len, input_dim]
-        spation_temporal_features, _ = self.sequence(features,seq_len)
+        spatio_temporal_features, _ = self.sequence(features,seq_len)
         
         t_fake_tensor = t_fake.unsqueeze(-1) # [batch_size, 1, 1]
-        t_fake_tensor = t_fake_tensor.expand(-1,spation_temporal_features.size(1),-1) # [batch_size, seq_len, 1]
+        t_fake_tensor = t_fake_tensor.expand(-1,spatio_temporal_features.size(1),-1) # [batch_size, seq_len, 1]
         assert t_fake_tensor.dim() == 3, f"Expected 3D tensor, got {t_real_tensor.shape} tensor"
         t_real_tensor = t_real.unsqueeze(-1).unsqueeze(-1) # [batch_size, 1, 1]
         # print(t_real_tensor)
         assert t_real_tensor.dim() == 3, f"Expected 3D tensor, got {t_real_tensor.shape} tensor"
-        t_real_tensor = t_real_tensor.expand(-1,spation_temporal_features.size(1),-1) # [batch_size, seq_len, 1]
+        t_real_tensor = t_real_tensor.expand(-1,spatio_temporal_features.size(1),-1) # [batch_size, seq_len, 1]
         
-        classifier_fake_in = torch.concat([spation_temporal_features, t_fake_tensor], dim=-1) # [batch_size, seq_len, input_dim + 1]
-        classifier_real_in = torch.concat([spation_temporal_features, t_real_tensor], dim=-1) # [batch_size, seq_len, input_dim + 1]
+        assert t_real_tensor.size(1) == spatio_temporal_features.size(1), f"Expected same sequence length in real, got {t_real_tensor.size(1)} and {spatio_temporal_features.size(1)}"
+        assert t_fake_tensor.size(1) == spatio_temporal_features.size(1), f"Expected same sequence length in fake, got {t_fake_tensor.size(1)} and {spatio_temporal_features.size(1)}"
+        classifier_fake_in = torch.concat([spatio_temporal_features, t_fake_tensor], dim=-1) # [batch_size, seq_len, input_dim + 1]
+        classifier_real_in = torch.concat([spatio_temporal_features, t_real_tensor], dim=-1) # [batch_size, seq_len, input_dim + 1]
         
         pooled_fake = classifier_fake_in.mean(dim=1) # [batch_size, input_dim + 1]
         pooled_real = classifier_real_in.mean(dim=1) # [batch_size, input_dim + 1]

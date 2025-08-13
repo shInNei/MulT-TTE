@@ -233,4 +233,3 @@ class Decoder(nn.Module):
             x = self.layers[i](x, lens)
         return self.norm(x)
 
-
