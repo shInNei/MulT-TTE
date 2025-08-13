@@ -24,7 +24,11 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
     theta = args.theta
     phases = ['train', 'val', 'test']
     since = time.perf_counter()
-
+    for phase in phases:
+        if phase not in data_loaders:
+            raise KeyError(f"{phase} loader is missing from data_loaders")
+        print(f"{phase} loader found with {len(data_loaders[phase])} batches")
+        
     with open(model_folder + "/output.txt", "a") as f:
         f.write(str(model))
         f.write("\n\n")
