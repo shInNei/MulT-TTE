@@ -59,10 +59,11 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                 for step, (features, truth_data) in enumerate(tqdm_loader):
                     steps += truth_data.size(0)
                     features = to_var(features, args.device)
+                    
                     targets.append(truth_data.numpy())
                     truth_data = to_var(truth_data, args.device)
                     
-                    args.real_time   = truth_data
+                    args.real_time = truth_data
                     
                     if phase == 'train':
                         ### train regressor
@@ -70,8 +71,7 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                         set_requires_grad(model.discriminator, False)
                         
                         optimizer_R.zero_grad()
-                        
-                        outputs, loss_1, _, loss_fake_R = model(features,args)
+                        outputs, loss_1, loss_D, loss_fake_R = model(features,args)
                         loss_2 = loss_func(truth=truth_data, predict=outputs)
                         loss = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2 + theta * loss_fake_R
                         
@@ -85,7 +85,7 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                             
                             optimizer_D.zero_grad()
                             
-                            _,_,loss_D,_ = model(features, args)
+                            # _,_,loss_D,_ = model(features, args)
                             
                             loss_D.backward()
                             torch.nn.utils.clip_grad.clip_grad_norm_(model.discriminator.parameters(), 50)  # after 50  # 20效果不佳，无法达到最优
