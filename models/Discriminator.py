@@ -30,7 +30,7 @@ class Discriminator(nn.Module):
     def forward(self,features, t_fake: torch.Tensor,t_real, seq_len=None):
         # spatiotemporal_features: [batch_size, seq_len, input_dim]
         spatio_temporal_features, _ = self.sequence(features,seq_len)
-        assert False, spatio_temporal_features.shape
+        spatio_temporal_features = spatio_temporal_features.permute(1,0,2)
         t_fake_tensor = t_fake.unsqueeze(-1) # [batch_size, 1, 1]
         t_fake_tensor = t_fake_tensor.expand(-1,spatio_temporal_features.size(1),-1) # [batch_size, seq_len, 1]
         assert t_fake_tensor.dim() == 3, f"Expected 3D tensor, got {t_real_tensor.shape} tensor"
@@ -39,11 +39,7 @@ class Discriminator(nn.Module):
         assert t_real_tensor.dim() == 3, f"Expected 3D tensor, got {t_real_tensor.shape} tensor"
         t_real_tensor = t_real_tensor.expand(-1,spatio_temporal_features.size(1),-1) # [batch_size, seq_len, 1]
         
-        assert t_real_tensor.size(1) == spatio_temporal_features.size(1), f"Expected same sequence length in real, got {t_real_tensor.size(1)} and {spatio_temporal_features.size(1)}"
-        assert t_fake_tensor.size(1) == spatio_temporal_features.size(1), f"Expected same sequence length in fake, got {t_fake_tensor.size(1)} and {spatio_temporal_features.size(1)}"
-        
-        assert t_real_tensor.size(0) == spatio_temporal_features.size(0), f"Expected same batch size in real, got {t_real_tensor.size(0)} and {spatio_temporal_features.size(0)}"
-        assert t_fake_tensor.size(0) == spatio_temporal_features.size(0), f"Expected same batch size in fake, got {t_fake_tensor.size(0)} and {spatio_temporal_features.size(0)}"
+        assert spatio_temporal_features.shape[:2] == t_fake_tensor.shape[:2]
         
         classifier_fake_in = torch.concat([spatio_temporal_features, t_fake_tensor], dim=-1) # [batch_size, seq_len, input_dim + 1]
         classifier_real_in = torch.concat([spatio_temporal_features, t_real_tensor], dim=-1) # [batch_size, seq_len, input_dim + 1]
