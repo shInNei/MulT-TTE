@@ -24,12 +24,11 @@ class Discriminator(nn.Module):
         # self.dateembed = nn.Embedding(367, 10)
         # self.timeembed = nn.Embedding(1441, 20)
         # multi-faceted Sequential Encoder
-        self.sequence = LayerNormGRU(input_dim, seq_hidden_dim, seq_layer)
+        # self.sequence = LayerNormGRU(input_dim, seq_hidden_dim, seq_layer)
         self.classifier = Classifier(seq_hidden_dim + 1,classifier_hidden_dim, 1)
         
-    def forward(self,features, t_fake: torch.Tensor,t_real, seq_len=None):
+    def forward(self,spatio_temporal_features, t_fake: torch.Tensor,t_real, seq_len=None):
         # spatiotemporal_features: [batch_size, seq_len, input_dim]
-        spatio_temporal_features, _ = self.sequence(features,seq_len)
         spatio_temporal_features = spatio_temporal_features.permute(1,0,2)
         t_fake_tensor = t_fake.unsqueeze(-1) # [batch_size, 1, 1]
         t_fake_tensor = t_fake_tensor.expand(-1,spatio_temporal_features.size(1),-1) # [batch_size, seq_len, 1]

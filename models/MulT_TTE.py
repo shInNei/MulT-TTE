@@ -20,9 +20,9 @@ class MulT_TTE(nn.Module):
         self.bce_loss = nn.BCEWithLogitsLoss()
         
     def forward(self, inputs, args):
-        output, representation, loss1 = self.regressor(inputs, args)
+        output, spatio_temporal_features, loss1 = self.regressor(inputs, args)
         lens = inputs['lens']
-        out_fake, out_real = self.discriminator(representation,output, args.real_time, lens.long())
+        out_fake, out_real = self.discriminator(spatio_temporal_features,output, args.real_time, lens.long())
         
         loss_real = self.bce_loss(out_real, torch.ones_like(out_real, device = out_real.device))
         loss_fake = self.bce_loss(out_fake, torch.zeros_like(out_fake, device = out_fake.device))
@@ -117,7 +117,7 @@ class Regressor(nn.Module):
         output = self.hid2out(hidden)
         output = args.scaler.inverse_transform(output)
         
-        return output, representation,loss_1
+        return output, hiddens, loss_1
 
 
 class Norm(nn.Module):
