@@ -75,7 +75,7 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                         loss_2 = loss_func(truth=truth_data, predict=outputs)
                         loss = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2 + theta * loss_fake_R
                         
-                        loss.backward()
+                        loss.backward(retain_graph=True)
                         torch.nn.utils.clip_grad.clip_grad_norm_(model.regressor.parameters(), 50)  # after 50  # 20效果不佳，无法达到最优
                         optimizer_R.step()
                         
