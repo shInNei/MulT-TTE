@@ -30,7 +30,7 @@ class Discriminator(nn.Module):
     def forward(self,features, t_fake: torch.Tensor,t_real, seq_len=None):
         # spatiotemporal_features: [batch_size, seq_len, input_dim]
         spatio_temporal_features, _ = self.sequence(features,seq_len)
-        
+        assert False, spatio_temporal_features.shape
         t_fake_tensor = t_fake.unsqueeze(-1) # [batch_size, 1, 1]
         t_fake_tensor = t_fake_tensor.expand(-1,spatio_temporal_features.size(1),-1) # [batch_size, seq_len, 1]
         assert t_fake_tensor.dim() == 3, f"Expected 3D tensor, got {t_real_tensor.shape} tensor"
