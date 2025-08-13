@@ -41,6 +41,10 @@ class Discriminator(nn.Module):
         
         assert t_real_tensor.size(1) == spatio_temporal_features.size(1), f"Expected same sequence length in real, got {t_real_tensor.size(1)} and {spatio_temporal_features.size(1)}"
         assert t_fake_tensor.size(1) == spatio_temporal_features.size(1), f"Expected same sequence length in fake, got {t_fake_tensor.size(1)} and {spatio_temporal_features.size(1)}"
+        
+        assert t_real_tensor.size(0) == spatio_temporal_features.size(0), f"Expected same batch size in real, got {t_real_tensor.size(0)} and {spatio_temporal_features.size(0)}"
+        assert t_fake_tensor.size(0) == spatio_temporal_features.size(0), f"Expected same batch size in fake, got {t_fake_tensor.size(0)} and {spatio_temporal_features.size(0)}"
+        
         classifier_fake_in = torch.concat([spatio_temporal_features, t_fake_tensor], dim=-1) # [batch_size, seq_len, input_dim + 1]
         classifier_real_in = torch.concat([spatio_temporal_features, t_real_tensor], dim=-1) # [batch_size, seq_len, input_dim + 1]
         
