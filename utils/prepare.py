@@ -175,7 +175,7 @@ def load_datadict(args):
     if args.mode == 'test':
         phases = ['test']
     else:
-        phases = ['train', 'val']
+        phases = ['train', 'val', 'test']
 
     for phase in phases:
         tdata = np.load(os.path.join(args.absPath,args.data_config['data_dir'], phase + '.npy'), allow_pickle=True)
