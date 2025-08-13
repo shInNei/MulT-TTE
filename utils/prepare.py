@@ -185,10 +185,11 @@ def load_datadict(args):
         loader[phase] = DataLoader(Datadict(data[phase]), batch_sampler=BatchSampler(data[phase], args.data_config['batch_size']),
                                        collate_fn=lambda x: eval(args.data_config['collate_fn'])(x, args, info_all),
                                        pin_memory=True)
-
-    loader['test'] = DataLoader(Datadict(data['test']), batch_size=args.data_config['batch_size'],
-                                    collate_fn=lambda x: eval(args.data_config['collate_fn' ])(x, args, info_all),
-                                    shuffle=False, pin_memory=True)
+        if phase == 'test':
+            
+            loader[phase] = DataLoader(Datadict(data[phase]), batch_size=args.data_config['batch_size'],
+                                        collate_fn=lambda x: eval(args.data_config['collate_fn' ])(x, args, info_all),
+                                        shuffle=False, pin_memory=True)
     return loader.copy(), StandardScaler2(mean=args.data_config['time_mean'], std=args.data_config['time_std'])
 
 
