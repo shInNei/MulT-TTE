@@ -105,6 +105,9 @@ def train_main(args):
     print(args.model_config)
     print(args.data_config)
     print(model_folder)
-    model.load_state_dict(torch.load(os.path.join(model_folder, 'best_model.pkl'), map_location=args.device)['model_state_dict'], strict=False)
+    
+    model.regressor.load_state_dict(torch.load(os.path.join(model_folder, 'best_model.pkl'), map_location=args.device)['R_state_dict'], strict=False)
+    model.discriminator.load_state_dict(torch.load(os.path.join(model_folder, 'best_model.pkl'), map_location=args.device)['D_state_dict'], strict=False)
+    
     test_model(model, data_loaders['test'], args)
 

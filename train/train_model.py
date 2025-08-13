@@ -22,7 +22,7 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
     num_epochs = args.epochs
     beta = args.beta
     theta = args.theta
-    phases = ['train','val', 'test']
+    phases = ['val', 'test']
     since = time.perf_counter()
     for phase in phases:
         if phase not in data_loaders:
@@ -145,6 +145,9 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
 
                 predictions = np.concatenate(predictions).copy()
                 targets = np.concatenate(targets).copy()
+                
+                assert predictions.shape == targets.shape, f'{predictions.shape}, {targets.shape}'
+                
                 scores = calculate_metrics(predictions.reshape(predictions.shape[0], -1),
                                            targets.reshape(targets.shape[0], -1), args, plot=epoch % 5 == 0, **kwargs)
                 with open(model_folder+"/output.txt", "a") as f:
