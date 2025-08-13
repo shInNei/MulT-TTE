@@ -24,8 +24,8 @@ class MulT_TTE(nn.Module):
         lens = inputs['lens']
         out_fake, out_real = self.discriminator(representation,output, args.real_time, lens.long())
         
-        loss_real = nn.BCEWithLogitsLoss(out_real, torch.ones_like(out_real, device = out_real.device))
-        loss_fake = nn.BCEWithLogitsLoss(out_fake, torch.zeros_like(out_fake, device = out_fake.device))
+        loss_real = self.bce_loss(out_real, torch.ones_like(out_real, device = out_real.device))
+        loss_fake = self.bce_loss(out_fake, torch.zeros_like(out_fake, device = out_fake.device))
         
         loss_D = (loss_real + loss_fake) / 2
         
