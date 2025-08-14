@@ -187,6 +187,6 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                    **{'R_state_dict': copy.deepcopy(model.regressor.state_dict()),
                       'D_state_dict': copy.deepcopy(model.discriminator.state_dict()),
                       'epoch': epoch,
-                      'optimizer_state_dict': copy.deepcopy(optimizer_R.state_dict()),
+                      'optimizer_R_state_dict': copy.deepcopy(optimizer_R.state_dict()),
                       'optimizer_D_state_dict': copy.deepcopy(optimizer_D.state_dict())
                       })
