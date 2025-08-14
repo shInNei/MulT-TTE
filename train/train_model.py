@@ -22,7 +22,7 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
     num_epochs = args.epochs
     beta = args.beta
     theta = args.theta
-    phases = ['train']
+    phases = ['train','val','test']
     since = time.perf_counter()
     for phase in phases:
         if phase not in data_loaders:
