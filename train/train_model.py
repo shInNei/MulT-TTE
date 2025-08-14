@@ -83,8 +83,8 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                         torch.nn.utils.clip_grad.clip_grad_norm_(model.regressor.parameters(), 50)  # after 50  # 20效果不佳，无法达到最优
                         optimizer_R.step()
                         
-                        # if epoch % 2 == 0:
-                        if True:
+                        if epoch % 2 == 0:
+                        # if True:
                             set_requires_grad(model.regressor, False)
                             set_requires_grad(model.discriminator, True)
                             
@@ -102,7 +102,7 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                             loss = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2 + theta * loss_fake_R
 
                             
-                    d_loss_str = f"D loss: {loss_D.item()}" if not (phase == "train" and epoch % 2 == 0) else ""
+                    d_loss_str = f"D loss: {loss_D.item()}"
                     desc = f"loss1: {loss_1.item()}, loss2: {loss_2.item()}, {d_loss_str}"
                     tqdm_loader.set_description(
                         f'{phase} epoch: {epoch}, {phase} loss: {(running_loss[phase] / steps) :.8f}, '
