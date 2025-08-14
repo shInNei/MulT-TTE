@@ -96,8 +96,8 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                             optimizer_D.step()
                     else:
                         with torch.no_grad():
-                            output, loss_1, loss_D, loss_fake_R = model(features,args)
-                            loss_2 = loss_func(truth=truth_data, predict=output)
+                            outputs, loss_1, loss_D, loss_fake_R = model(features,args)
+                            loss_2 = loss_func(truth=truth_data, predict=outputs)
                             loss = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2 + theta * loss_fake_R
 
                             
@@ -187,6 +187,6 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                    **{'R_state_dict': copy.deepcopy(model.regressor.state_dict()),
                       'D_state_dict': copy.deepcopy(model.discriminator.state_dict()),
                       'epoch': epoch,
-                      'optimizer_state_dict': copy.deepcopy(optimizer_R.state_dict()),
+                      'optimizer_R_state_dict': copy.deepcopy(optimizer_R.state_dict()),
                       'optimizer_D_state_dict': copy.deepcopy(optimizer_D.state_dict())
                       })
