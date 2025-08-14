@@ -146,7 +146,7 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                 predictions = np.concatenate(predictions).copy()
                 targets = np.concatenate(targets).copy()
                 
-                assert predictions.shape == targets.shape, f'{predictions.shape}, {targets.shape}'
+                assert predictions[0].shape == targets[0].shape, f'{predictions.shape}, {targets.shape}'
                 
                 scores = calculate_metrics(predictions.reshape(predictions.shape[0], -1),
                                            targets.reshape(targets.shape[0], -1), args, plot=epoch % 5 == 0, **kwargs)
