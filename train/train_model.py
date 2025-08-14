@@ -176,7 +176,7 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
             if patiance >= args.patience:
                 print(f"Early stop! best MAE: {best_mae}")
                 break
-            scheduler.step(running_loss['val'])
+            # scheduler.step(running_loss['val'])
 
     finally:
         time_elapsed = time.perf_counter() - since
