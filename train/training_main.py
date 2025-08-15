@@ -101,13 +101,13 @@ def train_main(args):
         train_model(model=model, data_loaders=data_loaders,
                     loss_func=loss_func, optimizer_R=optimizer_R, optimizer_D=optimizer_D,
                     model_folder=model_folder, args=args, start_epoch=start_epoch)
-    print(args.loss)
-    print(args.model_config)
-    print(args.data_config)
-    print(model_folder)
+    # print(args.loss)
+    # print(args.model_config)
+    # print(args.data_config)
+    # print(model_folder)
     
-    model.regressor.load_state_dict(torch.load(os.path.join(model_folder, 'best_model.pkl'), map_location=args.device)['R_state_dict'], strict=False)
-    model.discriminator.load_state_dict(torch.load(os.path.join(model_folder, 'best_model.pkl'), map_location=args.device)['D_state_dict'], strict=False)
+    # model.regressor.load_state_dict(torch.load(os.path.join(model_folder, 'best_model.pkl'), map_location=args.device)['R_state_dict'], strict=False)
+    # model.discriminator.load_state_dict(torch.load(os.path.join(model_folder, 'best_model.pkl'), map_location=args.device)['D_state_dict'], strict=False)
     
-    test_model(model, data_loaders['test'], args)
+    # test_model(model, data_loaders['test'], args)
 
