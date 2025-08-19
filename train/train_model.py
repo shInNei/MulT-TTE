@@ -45,6 +45,7 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
         patiance = 0
         for epoch in range(start_epoch + 1, num_epochs):
             running_loss = {phase: 0.0 for phase in phases}
+            running_loss_D = {phase: 0.0 for phase in phases} 
             msg = []
             # freeze/unfreeze modules
             
@@ -136,6 +137,7 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                         predictions.append(outputs.cpu().detach().numpy())
 
                     running_loss[phase] += loss.item() * truth_data.size(0)
+                    running_loss_D[phase] += loss_D.item() * truth_data.size(0)
                     if step % 1000 == 0:
                         torch.cuda.empty_cache()
                         gc.collect()
@@ -150,13 +152,13 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                 scores = calculate_metrics(predictions.reshape(predictions.shape[0], -1),
                                            targets.reshape(targets.shape[0], -1), args, plot=epoch % 5 == 0, **kwargs)
                 with open(model_folder+"/output.txt", "a") as f:
-                    f.write(f'{phase} epoch: {epoch}, {phase} loss: {running_loss[phase] / steps}\n')
+                    f.write(f'{phase} epoch: {epoch}, {phase} loss: {running_loss[phase] / steps}, {phase} discriminator loss: {running_loss_D[phase] / steps}\n')
                     f.write(str(scores))
                     f.write('\n')
                     f.write(str(time.time()))
                     f.write("\n\n")
                 print(scores)
-                msg.append(f"{phase} epoch: {epoch}, {phase} loss: {running_loss[phase] / steps}\n {scores}\n")
+                msg.append(f"{phase} epoch: {epoch}, {phase} loss: {running_loss[phase] / steps}, {phase} discriminator loss: {running_loss_D[phase] / steps}\n {scores}\n")
                 if phase == 'val':
                     if scores['MAE'] < best_mae:
                         best_mae = scores['MAE']
