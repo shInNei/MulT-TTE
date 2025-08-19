@@ -47,9 +47,7 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
             running_loss = {phase: 0.0 for phase in phases}
             msg = []
             # freeze/unfreeze modules
-            train_discriminator = (epoch % 2 == 0)
-            set_requires_grad(model.regressor, True)
-            set_requires_grad(model.discriminator, train_discriminator)
+            
             # training/val/test loop
             for phase in phases:
                 if phase == 'train':
