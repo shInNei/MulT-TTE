@@ -82,7 +82,7 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                         torch.nn.utils.clip_grad.clip_grad_norm_(model.regressor.parameters(), 50)  # after 50  # 20效果不佳，无法达到最优
                         optimizer_R.step()
                         
-                        if epoch % 2 == 0:
+                        if epoch % args.epoch_cycle == 0:
                         # if True:
                             set_requires_grad(model.regressor, False)
                             set_requires_grad(model.discriminator, True)
