@@ -199,8 +199,8 @@ def create_model(args):
         model_config = json.load(file)[args.model]
     args.model_config = model_config
     model_config['pad_token_id'] = args.data_config['edges'] + 1
-    if "MulT_TTE" in args.model:
-        return MulT_TTE(**model_config)
+    
+    return MulT_TTE(**model_config), WGANCritic(model_config['seq_input_dim'],(model_config['discriminator_dim'] if hasattr(model_config,'discriminator_dim') else 64))
 
 def create_loss(args):
     if args.loss == 'rmse':

@@ -34,3 +34,10 @@ def to_var(var, device=0):
         var = map(lambda x: to_var(x, device), var)
         return var
 
+class W1Distance:
+    def __call__(self, D_fake, D_real=None,GP=None,reg=10,train_G=False):
+        if D_real is not None and D_fake is not None:
+            loss =  - torch.mean(D_real) + torch.mean(D_fake) + reg*GP
+        else:
+            loss = -torch.mean(D_fake)
+        return loss

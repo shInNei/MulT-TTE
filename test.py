@@ -83,7 +83,7 @@ def train_main(args):
         else:
             raise NotImplementedError()
 
-        train_model(model=model, data_loaders=data_loaders,
+        train_model(R_model=model, data_loaders=data_loaders,
                     loss_func=loss_func, optimizer_R=optimizer_R, optimizer_D=optimizer_D,
                     model_folder=model_folder, args=args)
     elif args.mode == 'resume':
@@ -98,7 +98,7 @@ def train_main(args):
         model.discriminator.load_state_dict(final_model['D_state_dict'], strict=False)
         optimizer_R.load_state_dict(final_model['optimizer_R_state_dict'])
         optimizer_D.load_state_dict(final_model['optimizer_D_state_dict'])
-        train_model(model=model, data_loaders=data_loaders,
+        train_model(R_model=model, data_loaders=data_loaders,
                     loss_func=loss_func, optimizer_R=optimizer_R, optimizer_D=optimizer_D,
                     model_folder=model_folder, args=args, start_epoch=start_epoch)
     print(args.loss)

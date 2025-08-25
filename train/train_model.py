@@ -16,27 +16,32 @@ def set_requires_grad(module, flag: bool):
     for p in module.parameters():
         p.requires_grad = flag
         
-def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
-                loss_func: callable, optimizer_R: optim, optimizer_D: optim,
+def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, DataLoader],
+                R_loss_func: callable, D_loss_func: callable, optimizer_R: optim, optimizer_D: optim,
                 model_folder: str, args, start_epoch=-1, **kwargs):
     num_epochs = args.epochs
     beta = args.beta
     theta = args.theta
     phases = ['train','val', 'test']
     since = time.perf_counter()
+    
     for phase in phases:
         if phase not in data_loaders:
             raise KeyError(f"{phase} loader is missing from data_loaders")
         print(f"{phase} loader found with {len(data_loaders[phase])} batches")
         
     with open(model_folder + "/output.txt", "a") as f:
-        f.write(str(model))
+        f.write("REGRESSION MODEL:\n")
+        f.write(str(R_model))
+        f.write("\n\n")
+        f.write("DISCRIMINATOR MODEL:\n")
+        f.write(str(D_model))
         f.write("\n\n")
 
-    save_dict, best_mae = {'R_state_dict': copy.deepcopy(model.regressor.state_dict()),
-                           'D_state_dict': copy.deepcopy(model.discriminator.state_dict()), 
+    R_save_dict, best_mae = {'state_dict': copy.deepcopy(R_model.state_dict()),
                            'epoch': 0
                            }, 10000
+    D_save_dict = {'state_dict': copy.deepcopy(D_model.state_dict())}
     
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer_R, mode='min', factor=.2, patience=2,
                                                      threshold=1e-2, threshold_mode='rel', min_lr=1e-7)
@@ -44,17 +49,17 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
     try:
         patiance = 0
         for epoch in range(start_epoch + 1, num_epochs):
-            running_loss = {phase: 0.0 for phase in phases}
+            running_loss_R = {phase: 0.0 for phase in phases}
             running_loss_D = {phase: 0.0 for phase in phases} 
             msg = []
-            # freeze/unfreeze modules
-            
             # training/val/test loop
             for phase in phases:
                 if phase == 'train':
-                    model.train()
+                    R_model.train()
+                    D_model.train()
                 else:
-                    model.eval()
+                    R_model.eval()
+                    D_model.eval()
                     
                 steps, predictions, targets = 0, list(), list()
                 tqdm_loader = tqdm(data_loaders[phase],mininterval=3)
@@ -70,33 +75,33 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                     
                     if phase == 'train':
                         ### train regressor
-                        set_requires_grad(model.regressor, True)
-                        set_requires_grad(model.discriminator, False)
+                        set_requires_grad(R_model.regressor, True)
+                        set_requires_grad(R_model.discriminator, False)
                         
                         optimizer_R.zero_grad()
-                        outputs, loss_1, loss_D, loss_fake_R = model(features,args)
+                        outputs, loss_1, loss_D, loss_fake_R = R_model(features,args)
                         loss_2 = loss_func(truth=truth_data, predict=outputs)
                         loss = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2 + theta * loss_fake_R
                         
                         loss.backward(retain_graph=True)
-                        torch.nn.utils.clip_grad.clip_grad_norm_(model.regressor.parameters(), 50)  # after 50  # 20效果不佳，无法达到最优
+                        torch.nn.utils.clip_grad.clip_grad_norm_(R_model.regressor.parameters(), 50)  # after 50  # 20效果不佳，无法达到最优
                         optimizer_R.step()
                         
                         if epoch % args.epoch_cycle == 0:
                         # if True:
-                            set_requires_grad(model.regressor, False)
-                            set_requires_grad(model.discriminator, True)
+                            set_requires_grad(R_model.regressor, False)
+                            set_requires_grad(R_model.discriminator, True)
                             
                             optimizer_D.zero_grad()
                             
-                            _,_,loss_D,_ = model(features, args)
+                            _,_,loss_D,_ = R_model(features, args)
                             
                             loss_D.backward()
-                            torch.nn.utils.clip_grad.clip_grad_norm_(model.discriminator.parameters(), 50)  # after 50  # 20效果不佳，无法达到最优
+                            torch.nn.utils.clip_grad.clip_grad_norm_(R_model.discriminator.parameters(), 50)  # after 50  # 20效果不佳，无法达到最优
                             optimizer_D.step()
                     else:
                         with torch.no_grad():
-                            outputs, loss_1, loss_D, loss_fake_R = model(features,args)
+                            outputs, loss_1, loss_D, loss_fake_R = R_model(features,args)
                             loss_2 = loss_func(truth=truth_data, predict=outputs)
                             loss = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2 + theta * loss_fake_R
 
@@ -104,7 +109,7 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                     d_loss_str = f"D loss: {loss_D.item()}"
                     desc = f"loss1: {loss_1.item()}, loss2: {loss_2.item()}, {d_loss_str}"
                     tqdm_loader.set_description(
-                        f'{phase} epoch: {epoch}, {phase} loss: {(running_loss[phase] / steps) :.8f}, '
+                        f'{phase} epoch: {epoch}, {phase} loss: {(running_loss_R[phase] / steps) :.8f}, '
                         + desc
                     )
                         
@@ -136,7 +141,7 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                     with torch.no_grad():
                         predictions.append(outputs.cpu().detach().numpy())
 
-                    running_loss[phase] += loss.item() * truth_data.size(0)
+                    running_loss_R[phase] += loss.item() * truth_data.size(0)
                     running_loss_D[phase] += loss_D.item() * truth_data.size(0)
                     if step % 1000 == 0:
                         torch.cuda.empty_cache()
@@ -152,22 +157,22 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
                 scores = calculate_metrics(predictions.reshape(predictions.shape[0], -1),
                                            targets.reshape(targets.shape[0], -1), args, plot=epoch % 5 == 0, **kwargs)
                 with open(model_folder+"/output.txt", "a") as f:
-                    f.write(f'{phase} epoch: {epoch}, {phase} loss: {running_loss[phase] / steps}, {phase} discriminator loss: {running_loss_D[phase] / steps}\n')
+                    f.write(f'{phase} epoch: {epoch}, {phase} loss: {running_loss_R[phase] / steps}, {phase} discriminator loss: {running_loss_D[phase] / steps}\n')
                     f.write(str(scores))
                     f.write('\n')
                     f.write(str(time.time()))
                     f.write("\n\n")
                 print(scores)
-                msg.append(f"{phase} epoch: {epoch}, {phase} loss: {running_loss[phase] / steps}, {phase} discriminator loss: {running_loss_D[phase] / steps}\n {scores}\n")
+                msg.append(f"{phase} epoch: {epoch}, {phase} loss: {running_loss_R[phase] / steps}, {phase} discriminator loss: {running_loss_D[phase] / steps}\n {scores}\n")
                 if phase == 'val':
                     if scores['MAE'] < best_mae:
                         best_mae = scores['MAE']
-                        save_dict.update(R_state_dict=copy.deepcopy(model.regressor.state_dict()),
-                                         D_state_dict=copy.deepcopy(model.discriminator.state_dict()),
+                        R_save_dict.update(R_state_dict=copy.deepcopy(R_model.regressor.state_dict()),
+                                         D_state_dict=copy.deepcopy(R_model.discriminator.state_dict()),
                                          epoch=epoch,
                                          optimizer_R_state_dict=copy.deepcopy(optimizer_R.state_dict()),
                                          optimizer_D_state_dict=copy.deepcopy(optimizer_D.state_dict()))
-                        save_model(f"{model_folder}/best_model.pkl", **save_dict)
+                        save_model(f"{model_folder}/best_model.pkl", **R_save_dict)
                         
                         patiance = 0
                     else:
@@ -177,16 +182,16 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
             if patiance >= args.patience:
                 print(f"Early stop! best MAE: {best_mae}")
                 break
-            scheduler.step(running_loss['val'])
+            scheduler.step(running_loss_R['val'])
 
     finally:
         time_elapsed = time.perf_counter() - since
         print(f"cost {time_elapsed} seconds")
 
-        save_model(f"{model_folder}/best_model.pkl", **save_dict)
+        save_model(f"{model_folder}/best_model.pkl", **R_save_dict)
         save_model(f"{model_folder}/final_model.pkl",
-                   **{'R_state_dict': copy.deepcopy(model.regressor.state_dict()),
-                      'D_state_dict': copy.deepcopy(model.discriminator.state_dict()),
+                   **{'R_state_dict': copy.deepcopy(R_model.regressor.state_dict()),
+                      'D_state_dict': copy.deepcopy(R_model.discriminator.state_dict()),
                       'epoch': epoch,
                       'optimizer_R_state_dict': copy.deepcopy(optimizer_R.state_dict()),
                       'optimizer_D_state_dict': copy.deepcopy(optimizer_D.state_dict())

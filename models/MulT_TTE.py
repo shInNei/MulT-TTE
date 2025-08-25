@@ -5,9 +5,9 @@ from torch import nn
 import torch.nn.functional as F
 
 from models.LayerNormGRU import LayerNormGRU
-from models.Discriminator import Discriminator
+from models.Discriminator import WGANCritic
 from transformers import BertConfig, BertForMaskedLM
-
+from utils.util import W1Distance
 batch_first=False
 bidirectional=False
 class MulT_TTE(nn.Module):
@@ -16,8 +16,9 @@ class MulT_TTE(nn.Module):
         super().__init__()
         self.regressor = Regressor(input_dim, seq_input_dim, seq_hidden_dim, seq_layer, bert_hiden_size, pad_token_id,
                  bert_attention_heads, bert_hidden_layers, decoder_layer, decode_head,vocab_size)
-        self.discriminator = Discriminator(seq_input_dim,seq_hidden_dim, seq_layer,discriminator_dim)
+        self.discriminator = WGANCritic(seq_input_dim,discriminator_dim)
         self.bce_loss = nn.BCEWithLogitsLoss()
+        self.w1_loss = W1Distance()
         
     def forward(self, inputs, args):
         output, spatio_temporal_features, loss1 = self.regressor(inputs, args)
