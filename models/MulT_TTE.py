@@ -100,7 +100,6 @@ class Regressor(nn.Module):
         datetimerep = torch.cat([weekrep, daterep, timerep], dim=-1)
 
         loss_1, hidden_states, prediction_scores = self.seg_embedding([inputs['linkindex'], inputs['encoder_attention_mask'], inputs['mask_label']])
-
         timene_input = torch.cat([self.seg_embedding_learning.bert.embeddings.word_embeddings(inputs['rawlinks']), datetimerep], dim=-1)
         timene = self.timene(timene_input)+timene_input
         features = torch.cat([feature[..., 1:3], highwayrep, gpsrep, timene], dim=-1)
@@ -108,7 +107,8 @@ class Regressor(nn.Module):
 
         representation = representation if batch_first else representation.transpose(0, 1).contiguous()
         hiddens, rnn_states = self.sequence(representation, seq_lens=lens.long())
-
+        print(rnn_states.shape)
+        exit()
         decoder = self.decoder(hiddens, lens)
         decoder = decoder if batch_first else decoder.transpose(0, 1).contiguous()
         pooled_decoder = self.pooling_sum(decoder, lens)
