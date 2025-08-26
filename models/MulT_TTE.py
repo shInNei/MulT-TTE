@@ -61,7 +61,7 @@ class Regressor(nn.Module):
         )
         # multi-faceted Sequential Encoder for regressor
         self.sequence = LayerNormGRU(seq_input_dim, seq_hidden_dim, seq_layer)
-        print("Sequence input dim: ", seq_input_dim)
+        # print("Sequence input dim: ", seq_input_dim)
         self.seq_hidden_dim = seq_hidden_dim * 2 if bidirectional else seq_hidden_dim
 
         self.decoder_embed_dim = seq_hidden_dim * 2 if bidirectional else seq_hidden_dim
@@ -89,7 +89,7 @@ class Regressor(nn.Module):
         feature = inputs['links']
 
         lens = inputs['lens']
-        print("Lens: ", max(lens))
+        # print("Lens: ", max(lens))
         highwayrep = self.highwayembed(feature[:, :, 0].long())
         weekrep = self.weekembed(feature[:, :, 3].long())
         daterep = self.dateembed(feature[:, :, 4].long())  # 10

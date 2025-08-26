@@ -90,6 +90,6 @@ class WGANCritic(nn.Module):
         output = self.model(d_input) # [batch_size, seq_len, 1]
         
         pooled_output = self.pooling_sum(output,lens) # [batch_size,1]
-        print(pooled_output.shape)
-        exit()
+        # print(pooled_output.shape)
+        # exit()
         return pooled_output
