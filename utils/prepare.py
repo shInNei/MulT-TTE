@@ -10,6 +10,7 @@ from torch.utils.data import Dataset
 from torch.utils.data.dataloader import DataLoader
 from utils.util import StandardScaler2
 from models.MulT_TTE import MulT_TTE
+from models.Discriminator import WGANCritic
 
 
 highway = {'living_street':1, 'morotway':2, 'motorway_link':3, 'plannned':4, 'trunk':5, "secondary":6, "trunk_link":7, "tertiary_link":8, "primary":9, "residential":10, "primary_link":11, "unclassified":12, "tertiary":13, "secondary_link":14}
