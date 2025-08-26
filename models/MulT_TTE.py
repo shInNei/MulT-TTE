@@ -12,28 +12,25 @@ batch_first=False
 bidirectional=False
 class MulT_TTE(nn.Module):
     def __init__(self, input_dim, seq_input_dim, seq_hidden_dim, seq_layer, bert_hiden_size, pad_token_id,
-                 bert_attention_heads, bert_hidden_layers, decoder_layer, decode_head, discriminator_dim=64,vocab_size=27300):
+                 bert_attention_heads, bert_hidden_layers, decoder_layer, decode_head,vocab_size=27300):
         super().__init__()
         self.regressor = Regressor(input_dim, seq_input_dim, seq_hidden_dim, seq_layer, bert_hiden_size, pad_token_id,
                  bert_attention_heads, bert_hidden_layers, decoder_layer, decode_head,vocab_size)
-        self.discriminator = WGANCritic(seq_input_dim,discriminator_dim)
-        self.bce_loss = nn.BCEWithLogitsLoss()
-        self.w1_loss = W1Distance()
         
     def forward(self, inputs, args):
-        output, spatio_temporal_features, loss1 = self.regressor(inputs, args)
-        lens = inputs['lens']
-        out_fake, out_real = self.discriminator(spatio_temporal_features,output, args.real_time, lens.long())
+        return self.regressor(inputs, args)
+        # lens = inputs['lens']
+        # out_fake, out_real = self.discriminator(spatio_temporal_features,output, args.real_time, lens.long())
         
-        loss_real = self.bce_loss(out_real, torch.ones_like(out_real, device = out_real.device))
-        loss_fake = self.bce_loss(out_fake, torch.zeros_like(out_fake, device = out_fake.device))
+        # loss_real = self.bce_loss(out_real, torch.ones_like(out_real, device = out_real.device))
+        # loss_fake = self.bce_loss(out_fake, torch.zeros_like(out_fake, device = out_fake.device))
         
-        loss_D = (loss_real + loss_fake) / 2
+        # loss_D = (loss_real + loss_fake) / 2
         
-        #adversarial
-        loss_fake_R = self.bce_loss(out_fake, torch.ones_like(out_fake, device = out_fake.device))
+        # #adversarial
+        # loss_fake_R = self.bce_loss(out_fake, torch.ones_like(out_fake, device = out_fake.device))
         
-        return output, loss1, loss_D, loss_fake_R
+        # return output, loss1, loss_D, loss_fake_R
         
 class Regressor(nn.Module):
     def __init__(self, input_dim, seq_input_dim, seq_hidden_dim, seq_layer, bert_hiden_size, pad_token_id,

@@ -79,9 +79,17 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                         set_requires_grad(R_model.discriminator, False)
                         
                         optimizer_R.zero_grad()
-                        outputs, loss_1, loss_D, loss_fake_R = R_model(features,args)
-                        loss_2 = loss_func(truth=truth_data, predict=outputs)
-                        loss = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2 + theta * loss_fake_R
+                        outputs, spatio_temporal_features, loss_1 = R_model(features,args)
+                        
+                        lens = features['lens']
+                        
+                        D_output_fake = D_model(spatio_temporal_features, outputs, lens)
+                        D_output_real = D_model(spatio_temporal_features, truth_data, lens)
+                         
+                        loss_2 = R_loss_func(truth=truth_data, predict=outputs)
+                        loss_R = D_loss_func(D_output_fake,D_output_real)
+                        
+                        loss = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2 + theta * loss_R
                         
                         loss.backward(retain_graph=True)
                         torch.nn.utils.clip_grad.clip_grad_norm_(R_model.regressor.parameters(), 50)  # after 50  # 20效果不佳，无法达到最优
@@ -94,16 +102,27 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                             
                             optimizer_D.zero_grad()
                             
-                            _,_,loss_D,_ = R_model(features, args)
-                            
+                            outputs, spatio_temporal_features, loss_1 = R_model(features, args)
+                            D_output_fake = D_model(spatio_temporal_features, outputs, lens)
+                            loss_D = D_loss_func(D_output_fake)
+
                             loss_D.backward()
                             torch.nn.utils.clip_grad.clip_grad_norm_(R_model.discriminator.parameters(), 50)  # after 50  # 20效果不佳，无法达到最优
                             optimizer_D.step()
                     else:
                         with torch.no_grad():
-                            outputs, loss_1, loss_D, loss_fake_R = R_model(features,args)
-                            loss_2 = loss_func(truth=truth_data, predict=outputs)
-                            loss = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2 + theta * loss_fake_R
+                            outputs, spatio_temporal_features, loss_1 = R_model(features,args)
+                                                    
+                            lens = features['lens']
+                                                    
+                            D_output_fake = D_model(spatio_temporal_features, outputs, lens)
+                            D_output_real = D_model(spatio_temporal_features, truth_data, lens)      
+                             
+                            loss_2 = R_loss_func(truth=truth_data, predict=outputs)
+                            loss_R = D_loss_func(D_output_fake,D_output_real)
+                            loss_D = D_loss_func(D_output_fake)
+                            
+                            loss = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2 + theta * loss_R
 
                             
                     d_loss_str = f"D loss: {loss_D.item()}"
@@ -167,12 +186,19 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                 if phase == 'val':
                     if scores['MAE'] < best_mae:
                         best_mae = scores['MAE']
-                        R_save_dict.update(R_state_dict=copy.deepcopy(R_model.regressor.state_dict()),
-                                         D_state_dict=copy.deepcopy(R_model.discriminator.state_dict()),
-                                         epoch=epoch,
-                                         optimizer_R_state_dict=copy.deepcopy(optimizer_R.state_dict()),
-                                         optimizer_D_state_dict=copy.deepcopy(optimizer_D.state_dict()))
-                        save_model(f"{model_folder}/best_model.pkl", **R_save_dict)
+                        R_save_dict.update(
+                            state_dict=copy.deepcopy(R_model.state_dict()),
+                            epoch=epoch,
+                            optimizer_state_dict=copy.deepcopy(optimizer_R.state_dict())
+                        )
+                        save_model(f"{model_folder}/best_R_model.pkl", **R_save_dict)
+                        
+                        D_save_dict.update(
+                            state_dict=copy.deepcopy(D_model.state_dict()),
+                            epoch=epoch,
+                            optimizer_state_dict=copy.deepcopy(optimizer_D.state_dict())
+                        )
+                        save_model(f"{model_folder}/best_D_model.pkl", **D_save_dict)
                         
                         patiance = 0
                     else:
@@ -188,11 +214,16 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
         time_elapsed = time.perf_counter() - since
         print(f"cost {time_elapsed} seconds")
 
-        save_model(f"{model_folder}/best_model.pkl", **R_save_dict)
-        save_model(f"{model_folder}/final_model.pkl",
-                   **{'R_state_dict': copy.deepcopy(R_model.regressor.state_dict()),
-                      'D_state_dict': copy.deepcopy(R_model.discriminator.state_dict()),
+        save_model(f"{model_folder}/best_R_model.pkl", **R_save_dict)
+        save_model(f"{model_folder}/final_R_model.pkl",
+                   **{'state_dict': copy.deepcopy(R_model.state_dict()),
                       'epoch': epoch,
-                      'optimizer_R_state_dict': copy.deepcopy(optimizer_R.state_dict()),
-                      'optimizer_D_state_dict': copy.deepcopy(optimizer_D.state_dict())
+                      'optimizer_state_dict': copy.deepcopy(optimizer_R.state_dict()),
+                      })
+        
+        save_model(f"{model_folder}/best_D_model.pkl", **D_save_dict)
+        save_model(f"{model_folder}/final_D_model.pkl",
+                   **{'state_dict': copy.deepcopy(D_model.state_dict()),
+                      'epoch': epoch,
+                      'optimizer_state_dict': copy.deepcopy(optimizer_D.state_dict())
                       })

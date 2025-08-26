@@ -35,9 +35,11 @@ def to_var(var, device=0):
         return var
 
 class W1Distance:
-    def __call__(self, D_fake, D_real=None,GP=None,reg=10,train_G=False):
+    def __call__(self, D_fake, D_real=None,GP=None,reg=10):
         if D_real is not None and D_fake is not None:
+            # for generator
             loss =  - torch.mean(D_real) + torch.mean(D_fake) + reg*GP
         else:
+            # for discriminator
             loss = -torch.mean(D_fake)
         return loss

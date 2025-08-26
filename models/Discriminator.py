@@ -72,8 +72,15 @@ class WGANCritic(nn.Moudle):
             nn.LeakyReLU(),
             nn.Linear(hidden_dim, 1)
         )
+    def pooling_sum(self, hiddens, lens):
+        lens = lens.to(hiddens.device)
+        lens = torch.autograd.Variable(torch.unsqueeze(lens, dim=1), requires_grad=False)
+        batch_size = range(hiddens.shape[0])
+        for i in batch_size:
+            hiddens[i, 0] = torch.sum(hiddens[i, :lens[i]], dim=0)
+        return hiddens[list(batch_size), 0]
     
-    def forward(self, spatio_temporal_features, t: torch.Tensor):
+    def forward(self, spatio_temporal_features, t: torch.Tensor, lens):
         spatio_temporal_features = spatio_temporal_features.permute(1,0,2) # [batch_size, seq_len, input_dim]
         t_tensor = t.unsqueeze(-1) # [batch_size, 1, 1]
         t_tensor = t.expand(-1,spatio_temporal_features.size(1),-1)
@@ -82,4 +89,7 @@ class WGANCritic(nn.Moudle):
         
         output = self.model(d_input) # [batch_size, seq_len, 1]
         
-        return self.model(x)
+        pooled_output = self.pooling_sum(output,lens) # [batch_size,1]
+        print(pooled_output.shape)
+        exit()
+        return pooled_output
