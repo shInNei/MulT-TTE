@@ -31,6 +31,7 @@ class Discriminator(nn.Module):
         # spatiotemporal_features: [batch_size, seq_len, input_dim]
         spatio_temporal_features = spatio_temporal_features.permute(1,0,2)
         t_fake_tensor = t_fake.unsqueeze(-1) # [batch_size, 1, 1]
+        
         t_fake_tensor = t_fake_tensor.expand(-1,spatio_temporal_features.size(1),-1) # [batch_size, seq_len, 1]
         assert t_fake_tensor.dim() == 3, f"Expected 3D tensor, got {t_real_tensor.shape} tensor"
         t_real_tensor = t_real.unsqueeze(-1).unsqueeze(-1) # [batch_size, 1, 1]
@@ -84,6 +85,7 @@ class WGANCritic(nn.Module):
     def forward(self, spatio_temporal_features, t: torch.Tensor, lens):
         spatio_temporal_features = spatio_temporal_features.permute(1,0,2) # [batch_size, seq_len, input_dim]
         t_tensor = t.unsqueeze(-1) # [batch_size, 1, 1]
+        print("t_tensor shape: ", t_tensor.shape)
         t_tensor = t_tensor.expand(t_tensor.size(0),spatio_temporal_features.size(1),t_tensor.size(-1)) # [batch_size, seq_len, 1]
         d_input = torch.concat([spatio_temporal_features, t_tensor], dim=-1) # [batch_size, seq_len, input_dim + 1]        
         assert d_input.size(-1) == self.input_dim + 1, f"Expected input dim {self.input_dim + 1}, got {d_input.shape[2]}"
