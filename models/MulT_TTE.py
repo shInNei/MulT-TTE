@@ -103,9 +103,9 @@ class Regressor(nn.Module):
         timene = self.timene(timene_input)+timene_input
         features = torch.cat([feature[..., 1:3], highwayrep, gpsrep, timene], dim=-1)
         representation = self.represent(features)  # 2,5,16,97
-        
+
         representation = representation if batch_first else representation.transpose(0, 1).contiguous()
-        print(representation.shape)
+        print(f"Representation: {representation.shape}")
         hiddens, rnn_states = self.sequence(representation, seq_lens=lens.long())
         print(hiddens.shape)
         decoder = self.decoder(hiddens, lens)
