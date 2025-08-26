@@ -71,7 +71,7 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                     targets.append(truth_data.numpy())
                     truth_data = to_var(truth_data, args.device)
                     
-                    args.real_time = truth_data
+
                     
                     if phase == 'train':
                         ### train regressor
@@ -84,7 +84,7 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                         lens = features['lens']
                         
                         D_output_fake = D_model(spatio_temporal_features, outputs, lens)
-                        D_output_real = D_model(spatio_temporal_features, truth_data, lens)
+                        D_output_real = D_model(spatio_temporal_features, truth_data.unsqueeze(-1), lens)
                          
                         loss_2 = R_loss_func(truth=truth_data, predict=outputs)
                         loss_R = D_loss_func(D_output_fake,D_output_real)
