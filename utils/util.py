@@ -35,15 +35,15 @@ def to_var(var, device=0):
         return var
 
 class W1Distance:
-    def calculate_gradient_penalty(model, real_images, fake_images):
+    def calculate_gradient_penalty(model, real_images, fake_images,device):
         """Calculates the gradient penalty loss for WGAN GP"""
         # Random weight term for interpolation between real and fake data
-        alpha = torch.randn((real_images.size(0), 1, 1, 1), device=model.device)
+        alpha = torch.randn((real_images.size(0), 1, 1, 1), device=device)
         # Get random interpolation between real and fake data
         interpolates = (alpha * real_images + ((1 - alpha) * fake_images)).requires_grad_(True)
 
         model_interpolates = model(interpolates)
-        grad_outputs = torch.ones(model_interpolates.size(), device=model.device, requires_grad=False)
+        grad_outputs = torch.ones(model_interpolates.size(), device=device, requires_grad=False)
 
         # Get gradient w.r.t. interpolates
         gradients = torch.autograd.grad(
