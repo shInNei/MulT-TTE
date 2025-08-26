@@ -75,8 +75,8 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                     
                     if phase == 'train':
                         ### train regressor
-                        set_requires_grad(R_model.regressor, True)
-                        set_requires_grad(R_model.discriminator, False)
+                        set_requires_grad(R_model, True)
+                        set_requires_grad(D_model, False)
                         
                         optimizer_R.zero_grad()
                         outputs, spatio_temporal_features, loss_1 = R_model(features,args)
@@ -97,8 +97,8 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                         
                         if epoch % args.epoch_cycle == 0:
                         # if True:
-                            set_requires_grad(R_model.regressor, False)
-                            set_requires_grad(R_model.discriminator, True)
+                            set_requires_grad(R_model, False)
+                            set_requires_grad(D_model, True)
                             
                             optimizer_D.zero_grad()
                             
