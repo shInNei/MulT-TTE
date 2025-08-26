@@ -115,7 +115,9 @@ class Regressor(nn.Module):
         print(pooled_decoder.shape)
         pooled_hidden = torch.cat([pooled_decoder, weekrep[:, 0], daterep[:, 0], timerep[:, 0]], dim=-1)
         hidden = F.leaky_relu(self.input2hid(pooled_hidden))
+        print(hidden.shape)
         output = self.hid2out(hidden)
+        print(output.shape)
         output = args.scaler.inverse_transform(output)
         
         return output, hiddens, loss_1
