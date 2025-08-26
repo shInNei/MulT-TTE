@@ -65,6 +65,7 @@ class Classifier(nn.Module):
 class WGANCritic(nn.Module):
     def __init__(self,input_dim, hidden_dim):
         super().__init__()
+        self.input_dim = input_dim
         self.model = nn.Sequential(
             nn.Linear(input_dim + 1, hidden_dim),
             nn.LeakyReLU(),
@@ -84,9 +85,8 @@ class WGANCritic(nn.Module):
         spatio_temporal_features = spatio_temporal_features.permute(1,0,2) # [batch_size, seq_len, input_dim]
         t_tensor = t.unsqueeze(-1) # [batch_size, 1, 1]
         t_tensor = t_tensor.expand(-1,spatio_temporal_features.size(1),-1) # [batch_size, seq_len, 1]
-        print(t_tensor.shape)
-        d_input = torch.concat([spatio_temporal_features, t_tensor], dim=-1) # [batch_size, seq_len, input_dim + 1]
-        
+        d_input = torch.concat([spatio_temporal_features, t_tensor], dim=-1) # [batch_size, seq_len, input_dim + 1]        
+        assert d_input.shape[2] == self.input_dim + 1, f"Expected input dim {self.input_dim + 1}, got {d_input.shape[2]}"
         output = self.model(d_input) # [batch_size, seq_len, 1]
         
         pooled_output = self.pooling_sum(output,lens) # [batch_size,1]
