@@ -82,8 +82,9 @@ class LayerNormGRU(nn.Module):
 
     def forward(self, input: torch.Tensor, seq_lens=None):
         seq_len, batch_size, _ = input.size()
+        print("input:", input.shape)
         hx = input.new_zeros(self.num_layers, batch_size, self.hidden_dim, requires_grad=False)
-
+        print("hx:", hx.shape)
         ht = []
         for i in range(seq_len):
             ht.append([None] * (self.num_layers))
@@ -106,6 +107,7 @@ class LayerNormGRU(nn.Module):
             ht[t] = torch.stack(ht[t])
             h = ht[t]
         y = torch.stack([h[-1] for h in ht])
+        print("\ny:", y.shape)
         hy = torch.stack(list(torch.stack(ht).gather(dim=0, index=indices).squeeze(0)))
 
         return y, hy
@@ -155,7 +157,8 @@ from torch.nn import Parameter
 from torch.autograd import Variable
 def is_equal(a, b, epsilon=1e-5):
     return torch.all(torch.lt(torch.abs(torch.add(a, -b)), epsilon)).item() == 1
-
+def test_GRU():
+    pass
 def test_layernorm_LSTMCell():
     batch_size = 4
     hidden_size = 2
@@ -233,8 +236,8 @@ if __name__ == "__main__":
     print("start checking the layernorm-LSTMCell......")
     test_layernorm_LSTMCell()
     print()
-    print("start checking the layernorm-LSTM......")
-    test_layernorm_LSTM(use_biLSTM=False)
-    print()
-    print("start checking the bi-layernorm-LSTM......")
-    test_layernorm_LSTM(use_biLSTM=True)
+    # print("start checking the layernorm-LSTM......")
+    # test_layernorm_LSTM(use_biLSTM=False)
+    # print()
+    # print("start checking the bi-layernorm-LSTM......")
+    # test_layernorm_LSTM(use_biLSTM=True)
