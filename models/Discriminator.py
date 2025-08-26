@@ -62,7 +62,7 @@ class Classifier(nn.Module):
         x = self.relu(x)
         x = self.fc2(x)
         return x
-class WGANCritic(nn.Moudle):
+class WGANCritic(nn.Module):
     def __init__(self,input_dim, hidden_dim):
         super().__init__()
         self.model = nn.Sequential(
