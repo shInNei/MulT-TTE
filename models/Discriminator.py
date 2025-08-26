@@ -84,9 +84,9 @@ class WGANCritic(nn.Module):
         spatio_temporal_features = spatio_temporal_features.permute(1,0,2) # [batch_size, seq_len, input_dim]
         t_tensor = t.unsqueeze(-1) # [batch_size, 1, 1]
         print(t_tensor.shape)
+        t_tensor = t.expand(t_tensor.size(0),spatio_temporal_features.size(1),t_tensor.size(-1)) # [batch_size, seq_len, 1]
+        print(t_tensor.shape)
         exit()
-        t_tensor = t.expand(-1,spatio_temporal_features.size(1),-1)
-        
         d_input = torch.concat([spatio_temporal_features, t_tensor], dim=-1) # [batch_size, seq_len, input_dim + 1]
         
         output = self.model(d_input) # [batch_size, seq_len, 1]
