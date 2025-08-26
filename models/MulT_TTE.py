@@ -61,7 +61,7 @@ class Regressor(nn.Module):
         )
         # multi-faceted Sequential Encoder for regressor
         self.sequence = LayerNormGRU(seq_input_dim, seq_hidden_dim, seq_layer)
-
+        print(seq_input_dim)
         self.seq_hidden_dim = seq_hidden_dim * 2 if bidirectional else seq_hidden_dim
 
         self.decoder_embed_dim = seq_hidden_dim * 2 if bidirectional else seq_hidden_dim
