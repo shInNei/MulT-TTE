@@ -106,9 +106,9 @@ class Regressor(nn.Module):
         representation = self.represent(features)  # 2,5,16,97
 
         representation = representation if batch_first else representation.transpose(0, 1).contiguous()
-        print(f"Representation: {representation.shape}")
+        # print(f"Representation: {representation.shape}")
         hiddens, rnn_states = self.sequence(representation, seq_lens=lens.long())
-        print(hiddens.shape)
+        # print(hiddens.shape)
         decoder = self.decoder(hiddens, lens)
         decoder = decoder if batch_first else decoder.transpose(0, 1).contiguous()
         pooled_decoder = self.pooling_sum(decoder, lens)
