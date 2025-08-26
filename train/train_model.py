@@ -117,7 +117,7 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                             D_output_real = D_model(spatio_temporal_features, truth_data, lens)      
                              
                             loss_2 = R_loss_func(truth=truth_data, predict=outputs)
-                            loss_R = D_loss_func(D_output_fake,D_output_real)
+                            loss_R = D_loss_func(D_output_fake,D_output_real,D_loss_func.calculate_gradient_penalty(real_imgs, fake_imgs,args.device))
                             loss_D = D_loss_func(D_output_fake)
                             
                             loss = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2 + theta * loss_R
