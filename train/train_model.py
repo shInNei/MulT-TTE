@@ -71,8 +71,6 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                     targets.append(truth_data.numpy())
                     truth_data = to_var(truth_data, args.device)
                     
-
-                    
                     if phase == 'train':
                         ### train regressor
                         set_requires_grad(R_model, True)
@@ -83,11 +81,11 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                         
                         lens = features['lens']
                         
-                        D_output_fake = D_model(spatio_temporal_features, outputs, lens)
-                        D_output_real = D_model(spatio_temporal_features, truth_data.unsqueeze(-1), lens)
+                        D_output_fake, fake_imgs = D_model(spatio_temporal_features, outputs, lens)
+                        D_output_real, real_imgs = D_model(spatio_temporal_features, truth_data.unsqueeze(-1), lens)
                          
                         loss_2 = R_loss_func(truth=truth_data, predict=outputs)
-                        loss_R = D_loss_func(D_output_fake,D_output_real)
+                        loss_R = D_loss_func(D_output_fake,D_output_real,D_loss_func.calculate_gradient_penalty(real_imgs, fake_imgs))
                         
                         loss = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2 + theta * loss_R
                         
