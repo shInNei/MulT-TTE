@@ -89,6 +89,7 @@ class Regressor(nn.Module):
         feature = inputs['links']
 
         lens = inputs['lens']
+        print("Lens: ", max(lens))
         highwayrep = self.highwayembed(feature[:, :, 0].long())
         weekrep = self.weekembed(feature[:, :, 3].long())
         daterep = self.dateembed(feature[:, :, 4].long())  # 10
