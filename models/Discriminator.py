@@ -83,8 +83,8 @@ class WGANCritic(nn.Module):
         return hiddens[list(batch_size), 0]
     
     def forward(self, spatio_temporal_features, t: torch.Tensor | None, lens):
-        spatio_temporal_features = spatio_temporal_features.permute(1,0,2) # [batch_size, seq_len, input_dim]
         if t is not None:
+            spatio_temporal_features = spatio_temporal_features.permute(1,0,2) # [batch_size, seq_len, input_dim]
             t_tensor = t.unsqueeze(-1) # [batch_size, 1, 1]
             # print("t_tensor shape: ", t_tensor.shape)
             t_tensor = t_tensor.expand(t_tensor.size(0),spatio_temporal_features.size(1),t_tensor.size(-1)) # [batch_size, seq_len, 1]
