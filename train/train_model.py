@@ -10,21 +10,21 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from utils.metric import calculate_metrics
-from utils.util import save_model, to_var
-
+from utils.util import save_model, to_var, W1Distance
 def set_requires_grad(module, flag: bool):
     for p in module.parameters():
         p.requires_grad = flag
         
 def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, DataLoader],
-                R_loss_func: callable, D_loss_func: callable, optimizer_R: optim, optimizer_D: optim,
+                R_loss_func: callable, D_loss_func: callable, optimizer_R: torch.optim, optimizer_D: torch.optim,
                 model_folder: str, args, start_epoch=-1, **kwargs):
     num_epochs = args.epochs
     beta = args.beta
     theta = args.theta
+    n_critic = getattr(args, "n_critic", 5)
+    z_dim = getattr(args, "z_dim", 8)
     phases = ['train','val', 'test']
     since = time.perf_counter()
-    
     for phase in phases:
         if phase not in data_loaders:
             raise KeyError(f"{phase} loader is missing from data_loaders")
@@ -43,8 +43,8 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                            }, 10000
     D_save_dict = {'state_dict': copy.deepcopy(D_model.state_dict())}
     
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer_R, mode='min', factor=.2, patience=2,
-                                                     threshold=1e-2, threshold_mode='rel', min_lr=1e-7)
+    # scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer_R, mode='min', factor=.2, patience=2,
+    #                                                  threshold=1e-2, threshold_mode='rel', min_lr=1e-7)
 
     try:
         patiance = 0
@@ -62,64 +62,72 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                     D_model.eval()
                     
                 steps, predictions, targets = 0, list(), list()
-                tqdm_loader = tqdm(data_loaders[phase],mininterval=3)
                 
+                tqdm_loader = tqdm(data_loaders[phase],mininterval=3)
                 for step, (features, truth_data) in enumerate(tqdm_loader):
                     steps += truth_data.size(0)
+                    B = features.size(0)
+                    
                     features = to_var(features, args.device)
+                    lens = features['lens']
                     
                     targets.append(truth_data.numpy())
                     truth_data = to_var(truth_data, args.device)
                     
                     if phase == 'train':
-                        ### train regressor
-                        set_requires_grad(R_model, True)
-                        set_requires_grad(D_model, False)
+                        # why noise???? --> so can model random event
+                        # TODO: work on putting the noise into the generator/ regressor. However might be optional if BERT is already installed
+                        # --- train critic ---
+                        set_requires_grad(D_model, True)
+                        set_requires_grad(R_model, False)
                         
-                        optimizer_R.zero_grad()
-                        outputs, spatio_temporal_features, t_sequence, loss_1 = R_model(features,args)
-                        
-                        lens = features['lens']
-                        
-                        D_output_fake, fake_imgs = D_model(spatio_temporal_features, outputs, lens)
-                        D_output_real, real_imgs = D_model(spatio_temporal_features, truth_data.unsqueeze(-1), lens)
-                        loss_2 = R_loss_func(truth=truth_data, predict=outputs)
-                        loss_R = D_loss_func(D_output_fake,D_output_real,D_loss_func.calculate_gradient_penalty(real_imgs, fake_imgs,args.device))
-                        
-                        loss = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2 + theta * loss_R
-                        
-                        loss.backward(retain_graph=True)
-                        # torch.nn.utils.clip_grad.clip_grad_norm_(R_model.regressor.parameters(), 50)  # after 50  # 20效果不佳，无法达到最优
-                        optimizer_R.step()
-                        
-                        if epoch % args.epoch_cycle == 0:
-                        # if True:
-                            set_requires_grad(R_model, False)
-                            set_requires_grad(D_model, True)
+                        for _ in range(n_critic):
+                            with torch.no_grad():        
+                                z = torch.randn(B,z_dim).to(args.device)
+                                fake_times,spatio_temporal_features,_,_ = R_model(features,args)
+                                
+                            D_fake, fake_imgs = D_model(spatio_temporal_features, fake_times, lens)
+                            D_real, real_imgs = D_model(spatio_temporal_features, truth_data.unsqueeze(-1), lens)
+                            
+                            gp = W1Distance.calculate_gp_v2(D_model,real_imgs,fake_imgs,args.device)
+                            loss_D = W1Distance(D_fake,D_real,gp)
                             
                             optimizer_D.zero_grad()
-                            
-                            outputs, spatio_temporal_features, loss_1 = R_model(features, args)
-                            D_output_fake, _ = D_model(spatio_temporal_features, outputs, lens)
-                            loss_D = D_loss_func(D_output_fake)
-
                             loss_D.backward()
-                            # torch.nn.utils.clip_grad.clip_grad_norm_(D_model.parameters(), 50)  # after 50  # 20效果不佳，无法达到最优
                             optimizer_D.step()
+                        # --- train regressor ---
+                        set_requires_grad(D_model, False)
+                        set_requires_grad(R_model, True)
+                        
+                        z = torch.rand(B,z_dim).to(device=args.device)
+                        fake_times, spatio_temporal_features,_, loss_1 = R_model(features,args)
+                        
+                        D_fake,_ = D_model(spatio_temporal_features, fake_times, lens)
+                        loss_R_from_D = W1Distance(D_fake)
+                        loss_2 = R_loss_func(truth=truth_data, predict=fake_times)
+                        
+                        loss_R = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach()\
+                                + beta * loss_2\
+                                + theta * loss_R_from_D
+                        
+                        optimizer_R.zero_grad()
+                        loss_R.backward()
+                        optimizer_R.step()
+                        
                     else:
+                        # --- TEST AND VALIDATION PHASE ---
                         with torch.no_grad():
-                            outputs, spatio_temporal_features, t_sequence, loss_1 = R_model(features,args)
-                                                    
-                            lens = features['lens']
-                                                    
-                            D_output_fake = D_model(spatio_temporal_features, outputs, lens)
-                            D_output_real = D_model(spatio_temporal_features, truth_data, lens)      
-                             
-                            loss_2 = R_loss_func(truth=truth_data, predict=outputs)
-                            loss_R = D_loss_func(D_output_fake,D_output_real,D_loss_func.calculate_gradient_penalty(real_imgs, fake_imgs,args.device))
-                            loss_D = D_loss_func(D_output_fake)
+                            fake_times, spatio_temporal_features, _, loss_1 = R_model(features,args)
                             
-                            loss = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2 + theta * loss_R
+                            D_fake, fake_imgs = D_model(spatio_temporal_features, fake_times, lens)
+                            D_real, real_imgs = D_model(spatio_temporal_features, truth_data.unsqueeze(-1), lens)
+                            
+                            gp = W1Distance.calculate_gp_v2(D_model,real_imgs,fake_imgs,args.device)
+                            loss_R_from_D = W1Distance(D_fake)
+                            loss_D = W1Distance(D_fake,D_real,gp)
+                            loss_2 = R_loss_func(truth=truth_data, predict=fake_times)    
+                            
+                            loss_R = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2 + theta * loss_R_from_D
 
                             
                     d_loss_str = f"D loss: {loss_D.item()}"
@@ -129,35 +137,10 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                         + desc
                     )
                         
-                        
-                    # with torch.set_grad_enabled(phase == 'train'):
-                    #     outputs, loss_1, loss_D, loss_fake_R = model(features, args)
-                        
-                    #     loss_2 = loss_func(truth=truth_data, predict=outputs)
-                    #     loss = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2 + theta * loss_fake_R
-
-                    #     tqdm_loader.set_description(
-                    #         f'{phase} epoch: {epoch}, {phase} loss: {(running_loss[phase] / steps) :.8f}, '
-                    #         f'loss1: {loss_1.item()}, loss2: {loss_2.item()}, discriminator loss: {loss_D.item()}')
-
-                    #     if phase == 'train':
-                    #         # train regressor
-                    #         optimizer_R.zero_grad()
-                    #         loss.backward(retain_graph=train_discriminator)
-                    #         torch.nn.utils.clip_grad.clip_grad_norm_(model.regressor.parameters(), 50)  # after 50  # 20效果不佳，无法达到最优
-                    #         optimizer_R.step()
-                            
-                    #         # train discriminator
-                    #         if train_discriminator:
-                    #             optimizer_D.zero_grad()
-                    #             loss_D.backward()
-                    #             torch.nn.utils.clip_grad.clip_grad_norm_(model.discriminator.parameters(), 50)
-                    #             optimizer_D.step()
-
                     with torch.no_grad():
-                        predictions.append(outputs.cpu().detach().numpy())
+                        predictions.append(fake_times.cpu().detach().numpy())
 
-                    running_loss_R[phase] += loss.item() * truth_data.size(0)
+                    running_loss_R[phase] += loss_R.item() * truth_data.size(0)
                     running_loss_D[phase] += loss_D.item() * truth_data.size(0)
                     if step % 1000 == 0:
                         torch.cuda.empty_cache()
@@ -205,7 +188,7 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
             if patiance >= args.patience:
                 print(f"Early stop! best MAE: {best_mae}")
                 break
-            scheduler.step(running_loss_R['val'])
+            # scheduler.step(running_loss_R['val'])
 
     finally:
         time_elapsed = time.perf_counter() - since

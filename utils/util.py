@@ -34,6 +34,8 @@ def to_var(var, device=0):
         var = map(lambda x: to_var(x, device), var)
         return var
 
+
+
 class W1Distance:
     def calculate_gradient_penalty(model, real_images, fake_images,device):
         """Calculates the gradient penalty loss for WGAN GP"""
@@ -57,11 +59,34 @@ class W1Distance:
         gradients = gradients.view(gradients.size(0), -1)
         gradient_penalty = torch.mean((gradients.norm(2, dim=1) - 1) ** 2)
         return gradient_penalty
-
-    def __call__(self, D_fake, D_real=None,GP=None,reg=10):
+    @staticmethod
+    def calculate_gp_v2(model: torch.nn.Module, real_images: torch.Tensor, fake_images: torch.Tensor, device, lambda_gp=10):
+        B, T = real_images.shape
+        epsilon = torch.rand(B, 1, device=device).expand_as(real_images) 
+        
+        interpolated = epsilon * real_images + (1 - epsilon) * fake_images
+        interpolated.requires_grad_(True)
+        
+        model_interpolated = model(interpolated)
+        
+        grads = torch.autograd(
+            outputs=model_interpolated,
+            inputs=interpolated,
+            grad_outputs=torch.ones_like(model_interpolated),
+            create_graph=True,
+            retain_graph=True,
+            only_inputs=True
+        )[0]
+        
+        grad_norm = grads.view(B,-1).norm(2,dim=1)
+        gp = lambda_gp * ((grad_norm - 1) ** 2).mean()
+        
+        return gp
+     
+    def __call__(self, D_fake, D_real=None,GP=None):
         if D_real is not None and D_fake is not None:
             # for generator
-            loss =  - torch.mean(D_real) + torch.mean(D_fake) + reg*GP
+            loss =  - torch.mean(D_real) + torch.mean(D_fake) + GP
         else:
             # for discriminator
             loss = -torch.mean(D_fake)
