@@ -67,7 +67,7 @@ class W1Distance:
         interpolated = epsilon * real_images + (1 - epsilon) * fake_images
         interpolated.requires_grad_(True)
         print (interpolated.size)
-        model_interpolated = model(interpolated, None, lens)
+        model_interpolated,_ = model(interpolated, None, lens)
         
         grads = torch.autograd(
             outputs=model_interpolated,
