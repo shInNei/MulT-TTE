@@ -72,7 +72,7 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                     
                     targets.append(truth_data.numpy())
                     truth_data = to_var(truth_data, args.device)
-                    B = features.size(0)
+                    B = truth_data.size(0)
                     if phase == 'train':
                         # why noise???? --> so can model random event
                         # TODO: work on putting the noise into the generator/ regressor. However might be optional if BERT is already installed
