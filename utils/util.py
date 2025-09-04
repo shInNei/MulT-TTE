@@ -60,14 +60,14 @@ class W1Distance:
         gradient_penalty = torch.mean((gradients.norm(2, dim=1) - 1) ** 2)
         return gradient_penalty
     @staticmethod
-    def calculate_gp_v2(model: torch.nn.Module, real_images: torch.Tensor, fake_images: torch.Tensor, device, lambda_gp=10):
+    def calculate_gp_v2(model: torch.nn.Module, real_images: torch.Tensor, fake_images: torch.Tensor, lens, device, lambda_gp=10):
         B, T = real_images.shape
         epsilon = torch.rand(B, 1, device=device).expand_as(real_images) 
         
         interpolated = epsilon * real_images + (1 - epsilon) * fake_images
         interpolated.requires_grad_(True)
-        
-        model_interpolated = model(interpolated)
+        print (interpolated.size)
+        model_interpolated = model(interpolated, None, lens)
         
         grads = torch.autograd(
             outputs=model_interpolated,

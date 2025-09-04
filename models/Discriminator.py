@@ -82,12 +82,15 @@ class WGANCritic(nn.Module):
             hiddens[i, 0] = torch.sum(hiddens[i, :lens[i]], dim=0)
         return hiddens[list(batch_size), 0]
     
-    def forward(self, spatio_temporal_features, t: torch.Tensor, lens):
+    def forward(self, spatio_temporal_features, t: torch.Tensor | None, lens):
         spatio_temporal_features = spatio_temporal_features.permute(1,0,2) # [batch_size, seq_len, input_dim]
-        t_tensor = t.unsqueeze(-1) # [batch_size, 1, 1]
-        # print("t_tensor shape: ", t_tensor.shape)
-        t_tensor = t_tensor.expand(t_tensor.size(0),spatio_temporal_features.size(1),t_tensor.size(-1)) # [batch_size, seq_len, 1]
-        d_input = torch.concat([spatio_temporal_features, t_tensor], dim=-1) # [batch_size, seq_len, input_dim + 1]        
+        if t:
+            t_tensor = t.unsqueeze(-1) # [batch_size, 1, 1]
+            # print("t_tensor shape: ", t_tensor.shape)
+            t_tensor = t_tensor.expand(t_tensor.size(0),spatio_temporal_features.size(1),t_tensor.size(-1)) # [batch_size, seq_len, 1]
+            d_input = torch.concat([spatio_temporal_features, t_tensor], dim=-1) # [batch_size, seq_len, input_dim + 1]        
+        else:
+            d_input = spatio_temporal_features
         assert d_input.size(-1) == self.input_dim + 1, f"Expected input dim {self.input_dim + 1}, got {d_input.shape[2]}"
         output = self.model(d_input) # [batch_size, seq_len, 1]
         

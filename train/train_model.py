@@ -88,7 +88,7 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                             D_fake, fake_imgs = D_model(spatio_temporal_features, fake_times, lens)
                             D_real, real_imgs = D_model(spatio_temporal_features, truth_data.unsqueeze(-1), lens)
                             
-                            gp = W1Distance.calculate_gp_v2(D_model,real_imgs,fake_imgs,args.device)
+                            gp = W1Distance.calculate_gp_v2(D_model,real_imgs,fake_imgs,lens,args.device)
                             loss_D = W1Distance(D_fake,D_real,gp)
                             
                             optimizer_D.zero_grad()
