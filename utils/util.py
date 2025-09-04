@@ -62,7 +62,7 @@ class W1Distance:
     @staticmethod
     def calculate_gp_v2(model: torch.nn.Module, real_images: torch.Tensor, fake_images: torch.Tensor, lens, device, lambda_gp=10):
         B, T, _ = real_images.shape
-        epsilon = torch.rand(B, 1, device=device).expand_as(real_images) 
+        epsilon = torch.rand(B, 1,1, device=device).expand_as(real_images) 
         
         interpolated = epsilon * real_images + (1 - epsilon) * fake_images
         interpolated.requires_grad_(True)
