@@ -97,11 +97,11 @@ def train_main(args):
         
     elif args.mode == 'resume':
         if args.optim == "Adam":
-            optimizer_R = optim.Adam(R_model.regressor.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-            optimizer_D = optim.Adam(R_model.discriminator.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+            optimizer_R = optim.Adam(R_model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+            optimizer_D = optim.Adam(D_model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         elif args.optim == "AdamW":
-            optimizer_R = optim.AdamW(R_model.regressor.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-            optimizer_D = optim.AdamW(R_model.discriminator.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+            optimizer_R = optim.AdamW(R_model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+            optimizer_D = optim.AdamW(D_model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
         else:
             raise NotImplementedError()
         
