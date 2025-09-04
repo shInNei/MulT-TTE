@@ -77,7 +77,7 @@ class W1Distance:
             retain_graph=True,
             only_inputs=True
         )[0]
-        
+        grads = grads.view(grads.size(0), -1) 
         grad_norm = grads.view(B,-1).norm(2,dim=1)
         gp = lambda_gp * ((grad_norm - 1) ** 2).mean()
         
