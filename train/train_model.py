@@ -23,7 +23,11 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
     theta = args.theta
     n_critic = getattr(args, "n_critic", 1)
     z_dim = getattr(args, "z_dim", 8)
-    phases = ['train','val', 'test']
+    phases = [
+        # 'train',
+        'val',
+        'test'
+        ]
     w1 = W1Distance()
     since = time.perf_counter()
     for phase in phases:
