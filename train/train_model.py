@@ -24,6 +24,7 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
     n_critic = getattr(args, "n_critic", 5)
     z_dim = getattr(args, "z_dim", 8)
     phases = ['train','val', 'test']
+    w1 = W1Distance()
     since = time.perf_counter()
     for phase in phases:
         if phase not in data_loaders:
@@ -89,7 +90,7 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                             D_real, real_imgs = D_model(spatio_temporal_features, truth_data.unsqueeze(-1), lens)
                             
                             gp = W1Distance.calculate_gp_v2(D_model,real_imgs,fake_imgs,lens,args.device)
-                            loss_D = W1Distance(D_fake,D_real,gp)
+                            loss_D = w1(D_fake,D_real,gp)
                             
                             optimizer_D.zero_grad()
                             loss_D.backward()
@@ -102,7 +103,7 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                         fake_times, spatio_temporal_features,_, loss_1 = R_model(features,args)
                         
                         D_fake,_ = D_model(spatio_temporal_features, fake_times, lens)
-                        loss_R_from_D = W1Distance(D_fake)
+                        loss_R_from_D = w1(D_fake)
                         loss_2 = R_loss_func(truth=truth_data, predict=fake_times)
                         
                         loss_R = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach()\
@@ -122,8 +123,8 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                             D_real, real_imgs = D_model(spatio_temporal_features, truth_data.unsqueeze(-1), lens)
                             
                             gp = W1Distance.calculate_gp_v2(D_model,real_imgs,fake_imgs,args.device)
-                            loss_R_from_D = W1Distance(D_fake)
-                            loss_D = W1Distance(D_fake,D_real,gp)
+                            loss_R_from_D = w1(D_fake)
+                            loss_D = w1(D_fake,D_real,gp)
                             loss_2 = R_loss_func(truth=truth_data, predict=fake_times)    
                             
                             loss_R = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2 + theta * loss_R_from_D
