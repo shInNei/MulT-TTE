@@ -68,7 +68,7 @@ class W1Distance:
         interpolated.requires_grad_(True)
         model_interpolated,_ = model(interpolated, None, lens)
         
-        grads = torch.autograd(
+        grads = torch.autograd.grad(
             outputs=model_interpolated,
             inputs=interpolated,
             grad_outputs=torch.ones_like(model_interpolated),
