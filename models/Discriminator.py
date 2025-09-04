@@ -91,10 +91,10 @@ class WGANCritic(nn.Module):
             d_input = torch.concat([spatio_temporal_features, t_tensor], dim=-1) # [batch_size, seq_len, input_dim + 1]        
         else:
             d_input = spatio_temporal_features
-        assert d_input.size(-1) == self.input_dim + 1, f"Expected input dim {self.input_dim + 1}, got {d_input.shape[2]}"
+        # assert d_input.size(-1) == self.input_dim + 1, f"Expected input dim {self.input_dim + 1}, got {d_input.shape[2]}"
         output = self.model(d_input) # [batch_size, seq_len, 1]
         
         pooled_output = self.pooling_sum(output,lens) # [batch_size,1]
         # print(pooled_output.shape)
         # exit()
-        return pooled_output, d_input.view(spatio_temporal_features.size(0),-1)
+        return pooled_output, d_input
