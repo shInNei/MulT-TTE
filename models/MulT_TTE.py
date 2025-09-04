@@ -117,7 +117,7 @@ class Regressor(nn.Module):
         output = self.hid2out(hidden)
         output = args.scaler.inverse_transform(output)
         
-        return output, hiddens, loss_1
+        return output, hiddens, hidden, loss_1
 
 
 class Norm(nn.Module):

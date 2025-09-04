@@ -77,7 +77,7 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                         set_requires_grad(D_model, False)
                         
                         optimizer_R.zero_grad()
-                        outputs, spatio_temporal_features, loss_1 = R_model(features,args)
+                        outputs, spatio_temporal_features, t_sequence, loss_1 = R_model(features,args)
                         
                         lens = features['lens']
                         
@@ -108,7 +108,7 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                             optimizer_D.step()
                     else:
                         with torch.no_grad():
-                            outputs, spatio_temporal_features, loss_1 = R_model(features,args)
+                            outputs, spatio_temporal_features, t_sequence, loss_1 = R_model(features,args)
                                                     
                             lens = features['lens']
                                                     
