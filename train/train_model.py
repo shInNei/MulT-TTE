@@ -125,9 +125,10 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                             gp = W1Distance.calculate_gp_v2(D_model,real_imgs,fake_imgs,lens,args.device)
                             loss_R_from_D = w1(D_fake)
                             loss_D = w1(D_fake,D_real,gp)
+                            
                             loss_2 = R_loss_func(truth=truth_data, predict=fake_times)    
                             
-                            loss_R = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2 + theta * loss_R_from_D
+                            loss_R = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2
 
                             
                     d_loss_str = f"D loss: {loss_D.item()}"
