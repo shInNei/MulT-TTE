@@ -97,8 +97,8 @@ def train_main(args):
         
     elif args.mode == 'resume':
         if args.optim == "Adam":
-            optimizer_R = optim.Adam(R_model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
-            optimizer_D = optim.Adam(D_model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+            optimizer_R = optim.Adam(R_model.parameters(), lr=args.lr)
+            optimizer_D = optim.Adam(D_model.parameters(), lr=args.lr)
         elif args.optim == "AdamW":
             optimizer_R = optim.AdamW(R_model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
             optimizer_D = optim.AdamW(D_model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
@@ -114,7 +114,7 @@ def train_main(args):
         optimizer_D.load_state_dict(final_D_model['optimizer_state_dict'])
         train_model(R_model=R_model,D_model=D_model, data_loaders=data_loaders,
                     R_loss_func=R_loss_func,D_loss_func=D_loss_func, optimizer_R=optimizer_R, optimizer_D=optimizer_D,
-                    model_folder=model_folder, args=args)
+                    model_folder=model_folder, start_epoch=start_epoch, args=args)
     # print(args.loss)
     # print(args.model_config)
     # print(args.data_config)
