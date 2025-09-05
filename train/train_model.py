@@ -123,16 +123,16 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                         with torch.no_grad():
                             fake_times, spatio_temporal_features, _, loss_1 = R_model(features,args)
                             
-                            D_fake, _ = D_model(spatio_temporal_features, fake_times, lens)
-                            D_real, _ = D_model(spatio_temporal_features, truth_data.unsqueeze(-1), lens)
+                            D_fake, fake_imgs = D_model(spatio_temporal_features, fake_times, lens)
+                            D_real, real_imgs = D_model(spatio_temporal_features, truth_data.unsqueeze(-1), lens)
                                                         
                             loss_2 = R_loss_func(truth=truth_data, predict=fake_times)    
                             
                             loss_R = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2
 
-                            
-                    d_loss_str = f"Val/D_fake: {D_fake.item()}, Val/D_real: {D_real.item()}"
-                    desc = f"loss1: {loss_1.item()}, loss2: {loss_2.item()}, {d_loss_str}"
+                    if phase == 'train':   
+                        d_loss_str = f"D loss: {running_loss_D[phase] / steps :.8f}"
+                    desc = f"loss1: {loss_1.item()}, loss2: {loss_2.item()}, {d_loss_str if phase == 'train' else ''}"
                     tqdm_loader.set_description(
                         f'{phase} epoch: {epoch}, {phase} loss: {(running_loss_R[phase] / steps) :.8f}, '
                         + desc
@@ -142,8 +142,7 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                         predictions.append(fake_times.cpu().detach().numpy())
 
                     running_loss_R[phase] += loss_R.item() * truth_data.size(0)
-                    if phase == 'train':
-                        running_loss_D[phase] += loss_D.item() * truth_data.size(0)
+                    running_loss_D[phase] += loss_D.item() * truth_data.size(0)
                     if step % 1000 == 0:
                         torch.cuda.empty_cache()
                         gc.collect()
