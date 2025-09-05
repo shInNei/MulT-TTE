@@ -158,13 +158,19 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                 scores = calculate_metrics(predictions.reshape(predictions.shape[0], -1),
                                            targets.reshape(targets.shape[0], -1), args, plot=epoch % 5 == 0, **kwargs)
                 with open(model_folder+"/output.txt", "a") as f:
-                    f.write(f'{phase} epoch: {epoch}, {phase} loss: {running_loss_R[phase] / steps}, {phase} discriminator loss: {running_loss_D[phase] / steps}\n')
+                    if phase == 'train':
+                        f.write(f'{phase} epoch: {epoch}, {phase} loss: {running_loss_R[phase] / steps}, {phase} discriminator loss: {running_loss_D[phase] / steps}\n')
+                    else:
+                        f.write(f'{phase} epoch: {epoch}, {phase} loss: {running_loss_R[phase] / steps}\n')
                     f.write(str(scores))
                     f.write('\n')
                     f.write(str(time.time()))
                     f.write("\n\n")
                 print(scores)
-                msg.append(f"{phase} epoch: {epoch}, {phase} loss: {running_loss_R[phase] / steps}, {phase} discriminator loss: {running_loss_D[phase] / steps}\n {scores}\n")
+                if phase == 'train':
+                    msg.append(f"{phase} epoch: {epoch}, {phase} loss: {running_loss_R[phase] / steps}, {phase} discriminator loss: {running_loss_D[phase] / steps}\n {scores}\n")
+                else:
+                    msg.append(f"{phase} epoch: {epoch}, {phase} loss: {running_loss_R[phase] / steps}\n {scores}\n")
                 if phase == 'val':
                     if scores['MAE'] < best_mae:
                         best_mae = scores['MAE']
