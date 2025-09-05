@@ -24,7 +24,7 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
     n_critic = getattr(args, "n_critic", 1)
     z_dim = getattr(args, "z_dim", 8)
     phases = [
-        # 'train',
+        'train',
         'val',
         'test'
         ]
