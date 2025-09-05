@@ -76,11 +76,15 @@ class WGANCritic(nn.Module):
         )
     def pooling_sum(self, hiddens, lens):
         lens = lens.to(hiddens.device)
-        lens = torch.autograd.Variable(torch.unsqueeze(lens, dim=1), requires_grad=False)
-        batch_size = range(hiddens.shape[0])
-        for i in batch_size:
-            hiddens[i, 0] = torch.sum(hiddens[i, :lens[i]], dim=0)
-        return hiddens[list(batch_size), 0]
+        results = []
+        for i in range(hiddens.size(0)):
+            results.append(torch.sum(hiddens[i, :lens[i]], dim=0))
+        return torch.stack(results, dim=0)
+    def pooling_mean(self, hiddens, lens):
+        results = []
+        for i in range(hiddens.size(0)):
+            results.append(hiddens[i,:lens[i]].mean(dim=0))
+        return torch.stack(results, dim=0)
     
     def forward(self, spatio_temporal_features, t: torch.Tensor | None, lens):
         if t is not None:
@@ -94,7 +98,7 @@ class WGANCritic(nn.Module):
         # assert d_input.size(-1) == self.input_dim + 1, f"Expected input dim {self.input_dim + 1}, got {d_input.shape[2]}"
         output = self.model(d_input) # [batch_size, seq_len, 1]
         
-        pooled_output = self.pooling_sum(output,lens) # [batch_size,1]
+        pooled_output = self.pooling_mean(output,lens) # [batch_size,1]
         # print(pooled_output.shape)
         # exit()
         return pooled_output, d_input
