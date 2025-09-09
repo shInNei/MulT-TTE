@@ -137,7 +137,8 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
 
                     if phase == 'train':   
                         d_loss_str = f"D loss: {running_loss_D[phase] / steps :.8f}"
-                    desc = f"loss1: {loss_1.item()}, loss2: {loss_2.item()}, {d_loss_str if phase == 'train' else ''}"
+                        loss_from_D_str = f" Regressor loss from D: {loss_R_from_D.item()}"
+                    desc = f"loss1: {loss_1.item()}, loss2: {loss_2.item()}, {d_loss_str + loss_from_D_str if phase == 'train' else ''}"
                     tqdm_loader.set_description(
                         f'{phase} epoch: {epoch}, {phase} loss: {(running_loss_R[phase] / steps) :.8f}, '
                         + desc
