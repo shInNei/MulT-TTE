@@ -56,7 +56,8 @@ def MulT_TTE_collate_func(data, args, info_all):
                     y_end - y_start
                 ]
             except:
-                print(info)
+                print(infot)
+                raise 
             infos.append(np.asarray(infot))
             # highway length sumoflength date3 gps4
 
