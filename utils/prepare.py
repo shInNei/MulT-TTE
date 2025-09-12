@@ -41,7 +41,20 @@ def MulT_TTE_collate_func(data, args, info_all):
             length += info[1]
             infot += list(date)
             try:
-                infot += [nodeinfo[info[2]][0],nodeinfo[info[2]][1],nodeinfo[info[3]][0],nodeinfo[info[3]][1]]
+                x_start, y_start = nodeinfo[info[2]]
+                x_end,   y_end   = nodeinfo[info[3]]
+                
+                infot += [
+                    nodeinfo[info[2]][0], # x_start
+                    nodeinfo[info[2]][1], # y_start
+                    nodeinfo[info[3]][0], # x_end
+                    nodeinfo[info[3]][1] # y_end
+                ]
+                
+                infot += [
+                    x_end - x_start,
+                    y_end - y_start
+                ]
             except:
                 print(info)
             infos.append(np.asarray(infot))
@@ -52,9 +65,9 @@ def MulT_TTE_collate_func(data, args, info_all):
     con_links = np.concatenate([info(b, dateinfo[ind]) for ind, b in enumerate(linkids)], dtype='object')
     mask = np.arange(lens.max()) < lens[:, None]
 
-    padded = np.zeros((*mask.shape, 1+2+3+4), dtype=np.float32) #最后一个数是segment embedding维度，需要依据不同的维度更换
+    padded = np.zeros((*mask.shape, 1+2+3+4 + 2), dtype=np.float32) #最后一个数是segment embedding维度，需要依据不同的维度更换
     con_links[:, 1:3] = scaler.transform(con_links[:, 1:3])
-    con_links[:, 6:10] = scaler2.transform(con_links[:, 6:10])
+    con_links[:, 6:12] = scaler2.transform(con_links[:, 6:12])
     padded[mask] = con_links
     rawlinks = np.full(mask.shape, fill_value=args.data_config['edges'] + 1, dtype=np.int16)
     rawlinks[mask] = np.concatenate(linkids)
