@@ -49,8 +49,6 @@ def MulT_TTE_collate_func(data, args, info_all):
                     y_start, # y_start
                     x_end, # x_end
                     y_end, # y_end
-                    x_end - x_start, # dx
-                    y_end - y_start # dy
                 ]
             except:
                 print(infot)
@@ -65,7 +63,8 @@ def MulT_TTE_collate_func(data, args, info_all):
 
     padded = np.zeros((*mask.shape, 1+2+3+4 + 2), dtype=np.float32) #最后一个数是segment embedding维度，需要依据不同的维度更换
     con_links[:, 1:3] = scaler.transform(con_links[:, 1:3])
-    con_links[:, 6:12] = scaler2.transform(con_links[:, 6:12])
+    con_links[:, 6:10] = scaler2.transform(con_links[:, 6:10])
+    con_links[:,10:12] = con_links[:, 8:10] - con_links[:, 6:8]
     padded[mask] = con_links
     rawlinks = np.full(mask.shape, fill_value=args.data_config['edges'] + 1, dtype=np.int16)
     rawlinks[mask] = np.concatenate(linkids)
