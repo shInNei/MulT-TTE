@@ -28,7 +28,7 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
     save_dict, best_mae = {'model_state_dict': copy.deepcopy(model.state_dict()), 'epoch': 0}, 10000
 
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=.2, patience=2,
-                                                     threshold=1e-2, threshold_mode='rel', min_lr=1e-7, verbose=True)
+                                                     threshold=1e-2, threshold_mode='rel', min_lr=1e-7)
 
     try:
         patiance = 0
