@@ -41,19 +41,16 @@ def MulT_TTE_collate_func(data, args, info_all):
             length += info[1]
             infot += list(date)
             try:
-                x_start, y_start = nodeinfo[info[2]]
-                x_end,   y_end   = nodeinfo[info[3]]
+                x_start, y_start = nodeinfo[info[2]][0:2]
+                x_end, y_end   = nodeinfo[info[3]][0:2]
                 
                 infot += [
-                    nodeinfo[info[2]][0], # x_start
-                    nodeinfo[info[2]][1], # y_start
-                    nodeinfo[info[3]][0], # x_end
-                    nodeinfo[info[3]][1] # y_end
-                ]
-                
-                infot += [
-                    x_end - x_start,
-                    y_end - y_start
+                    x_start, # x_start
+                    y_start, # y_start
+                    x_end, # x_end
+                    y_end, # y_end
+                    x_end - x_start, # dx
+                    y_end - y_start # dy
                 ]
             except:
                 print(infot)
