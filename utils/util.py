@@ -61,9 +61,9 @@ class W1Distance:
      
     def __call__(self, D_fake, D_real=None,GP=None):
         if D_real is not None and D_fake is not None:
-            # for generator
+            # for discriminator
             loss =  - torch.mean(D_real) + torch.mean(D_fake) + GP
         else:
-            # for discriminator
+            # for generator
             loss = -torch.mean(D_fake)
         return loss
