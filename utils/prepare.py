@@ -115,7 +115,7 @@ class BatchSampler:
             partial_indices.sort(key = lambda x: self.lengths[x], reverse = True)
             self.indices[i * chunk_size: (i + 1) * chunk_size] = partial_indices
 
-        # yield batch
+        # yield batcha
         batches = (self.count - 1 + self.batch_size) // self.batch_size
 
         for i in range(batches):
@@ -202,6 +202,14 @@ def create_model(args):
     model_config['pad_token_id'] = args.data_config['edges'] + 1
     
     return MulT_TTE(**model_config), WGANCritic(model_config['seq_hidden_dim'],(model_config['discriminator_dim'] if hasattr(model_config,'discriminator_dim') else 64))
+
+def create_main_loss(loss_bert,loss_MAE,loss_D, args):
+    beta = args.beta
+    theta = args.theta
+    
+    return (1-beta-theta)*loss_bert / (loss_bert / loss_MAE + 1e-4).detach()\
+            + beta * loss_MAE\
+            + theta * loss_D
 
 def create_loss(args):
     if args.loss == 'rmse':

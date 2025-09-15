@@ -11,6 +11,7 @@ from tqdm import tqdm
 
 from utils.metric import calculate_metrics
 from utils.util import save_model, to_var, W1Distance
+from utils.prepare import create_main_loss
 def set_requires_grad(module, flag: bool):
     for p in module.parameters():
         p.requires_grad = flag
@@ -19,8 +20,6 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                 R_loss_func: callable, D_loss_func: callable, optimizer_R: torch.optim, optimizer_D: torch.optim,
                 model_folder: str, args, start_epoch=-1, **kwargs):
     num_epochs = args.epochs
-    beta = args.beta
-    theta = args.theta
     n_critic = getattr(args, "n_critic", 1)
     z_dim = getattr(args, "z_dim", 8)
     phases = [
@@ -115,9 +114,7 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                         
                         loss_2 = R_loss_func(truth=truth_data, predict=fake_times)
                         
-                        loss_R = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach()\
-                                + beta * loss_2\
-                                + theta * loss_R_from_D
+                        loss_R = create_main_loss(loss_1,loss_2,loss_R_from_D,args)
                         
                         optimizer_R.zero_grad()
                         loss_R.backward()
@@ -133,7 +130,7 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                                                         
                             loss_2 = R_loss_func(truth=truth_data, predict=fake_times)    
                             
-                            loss_R = (1 - beta) * loss_1 / (loss_1 / loss_2 + 1e-4).detach() + beta * loss_2
+                            loss_R = create_main_loss(loss_1,loss_2,None,args)
 
                     if phase == 'train':   
                         d_loss_str = f"D loss: {running_loss_D[phase] / steps :.8f}"
