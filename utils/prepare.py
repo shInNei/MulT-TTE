@@ -209,7 +209,7 @@ def create_main_loss(loss_bert,loss_MAE,loss_D, args):
     
     return (1-beta-theta)*loss_bert / (loss_bert / loss_MAE + 1e-4).detach()\
             + beta * loss_MAE\
-            + theta * loss_D
+            + (theta * loss_D) if loss_D is not None else 0
 
 def create_loss(args):
     if args.loss == 'rmse':
