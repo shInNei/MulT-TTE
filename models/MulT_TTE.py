@@ -23,7 +23,7 @@ class MulT_TTE(nn.Module):
         self.weekembed = nn.Embedding(8, 3)
         self.dateembed = nn.Embedding(367, 10)
         self.timeembed = nn.Embedding(1441, 20)
-        self.gpsrep = nn.Linear(6, 16)
+        self.gpsrep = nn.Linear(8, 16)
         self.timene_dim = 3 + 10 + 20 + bert_hiden_size
 
         self.timene = nn.Sequential(
@@ -71,7 +71,7 @@ class MulT_TTE(nn.Module):
         weekrep = self.weekembed(feature[:, :, 3].long())
         daterep = self.dateembed(feature[:, :, 4].long())  # 10
         timerep = self.timeembed(feature[:, :, 5].long())
-        gpsrep = self.gpsrep(feature[:, :, 6:12])
+        gpsrep = self.gpsrep(feature[:, :, 6:14])
 
         datetimerep = torch.cat([weekrep, daterep, timerep], dim=-1)
 

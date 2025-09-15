@@ -14,10 +14,9 @@ from models.MulT_TTE import MulT_TTE
 
 highway = {'living_street':1, 'morotway':2, 'motorway_link':3, 'plannned':4, 'trunk':5, "secondary":6, "trunk_link":7, "tertiary_link":8, "primary":9, "residential":10, "primary_link":11, "unclassified":12, "tertiary":13, "secondary_link":14}
 node_type = {'turning_circle':1, 'traffic_signals':2, 'crossing':3, 'motorway_junction':4, "mini_roundabout":5}
-
 # mlm任务的输入link index中需要预测的值不能是本身，否则产生信息泄露，TTE_edge_new_data_end2end_pre更正为TTE_edge_new_data_end2end
 def MulT_TTE_collate_func(data, args, info_all):
-    edgeinfo, nodeinfo, scaler, scaler2 = info_all
+    edgeinfo, nodeinfo, scaler, scaler2, scaler_dxdy = info_all
 
     time = torch.Tensor([d[-1] for d in data])
     linkids = []
@@ -53,18 +52,29 @@ def MulT_TTE_collate_func(data, args, info_all):
             except:
                 print(infot)
                 raise 
+            # add in more space for other features
+            dx = x_end - x_start
+            dy = y_end - y_start
+            bearing = np.arctan2(dy, dx)
+            infot += [
+                dx,
+                dy,
+                np.sin(bearing),
+                np.cos(bearing)
+            ]
             infos.append(np.asarray(infot))
             # highway length sumoflength date3 gps4
-
+            
         return infos
 
     con_links = np.concatenate([info(b, dateinfo[ind]) for ind, b in enumerate(linkids)], dtype='object')
     mask = np.arange(lens.max()) < lens[:, None]
 
-    padded = np.zeros((*mask.shape, 1+2+3+4 + 2), dtype=np.float32) #最后一个数是segment embedding维度，需要依据不同的维度更换
+    padded = np.zeros((*mask.shape, 1+2+3+4+4), dtype=np.float32) #最后一个数是segment embedding维度，需要依据不同的维度更换
     con_links[:, 1:3] = scaler.transform(con_links[:, 1:3])
     con_links[:, 6:10] = scaler2.transform(con_links[:, 6:10])
-    con_links[:,10:12] = con_links[:, 8:10] - con_links[:, 6:8]
+    con_links[:, 10:12] = scaler_dxdy.transform(con_links[:, 10:12])
+    
     padded[mask] = con_links
     rawlinks = np.full(mask.shape, fill_value=args.data_config['edges'] + 1, dtype=np.int16)
     rawlinks[mask] = np.concatenate(linkids)
@@ -154,6 +164,9 @@ def load_datadoct_pre(args):
         scaler2.fit([[0, 0, 0, 0]])
         scaler2.mean_ = [-8.62247695, 41.15923239, -8.62256569, 41.15929004]
         scaler2.scale_ = [0.02520552, 0.01236445, 0.02526226, 0.01242564]
+        with open('utils/porto_dxdy_scaler.pkl', 'rb') as f:
+            scaler_dxdy = pickle.load(f)
+        print('yeah+')
     elif "chengdu" in args.dataset:
         scaler = StandardScaler()
         scaler.fit([[0,0]])
@@ -166,7 +179,7 @@ def load_datadoct_pre(args):
     else:
         ValueError("Wrong Dataset Name")
 
-    info_all = [edgeinfo, nodeinfo, scaler, scaler2]
+    info_all = [edgeinfo, nodeinfo, scaler, scaler2, scaler_dxdy]
 
 
 class Datadict(Dataset):
@@ -250,3 +263,35 @@ def create_loss(args):
     return loss
 
 
+if __name__ == '__main__':
+    edge_path = r"mydata/network_porto/porto_edges_new_simplify.pkl"
+    node_path = r"mydata/network_porto/porto_nodes_new.pkl"
+    with open(edge_path, 'rb') as f:
+        edgeinfo = pickle.load(f)
+    with open(node_path, 'rb') as f:
+        nodeinfo = pickle.load(f)
+        
+    scaler = StandardScaler()
+    scaler.fit([[0, 0]])
+    scaler.mean_ = [107.497195, 3010.37456]
+    scaler.scale_ = [131.102877, 2750.78118]
+    scaler2 = StandardScaler()
+    scaler2.fit([[0, 0, 0, 0]])
+    scaler2.mean_ = [-8.62247695, 41.15923239, -8.62256569, 41.15929004]
+    scaler2.scale_ = [0.02520552, 0.01236445, 0.02526226, 0.01242564]
+    with open('utils/porto_dxdy_scaler.pkl','rb') as f:
+        scaler_dxdy = pickle.load(f)
+    global info_all
+    info_all = [
+        edgeinfo, nodeinfo, scaler, scaler2, scaler_dxdy
+        
+    ]
+    data = np.load(r'mydata/train.npy', allow_pickle=True)
+    loader = DataLoader(Datadict(data), batch_sampler=BatchSampler(data, 48),
+                                       collate_fn=lambda x: MulT_TTE_collate_func(x, {'dataset': 'porto'}, info_all),
+                                       pin_memory=True)
+    
+    one = next(iter(loader))
+    
+    print(one)
+    
