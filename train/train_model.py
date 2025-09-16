@@ -54,7 +54,8 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
         patiance = 0
         for epoch in range(start_epoch + 1, num_epochs):
             running_loss_R = {phase: 0.0 for phase in phases}
-            running_loss_D = {phase: 0.0 for phase in phases} 
+            running_loss_D = 0.0
+            running_loss_R_from_D = 0.0
             msg = []
             # training/val/test loop
             for phase in phases:
@@ -111,7 +112,6 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                         # if getattr(args, "punish_only", False):    
                         #     loss_R_from_D = torch.relu(loss_R_from_D)
                         
-                        
                         loss_2 = R_loss_func(truth=truth_data, predict=fake_times)
                         
                         loss_R = create_main_loss(loss_1,loss_2,loss_R_from_D,args)
@@ -133,9 +133,9 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                             loss_R = create_main_loss(loss_1,loss_2,None,args)
 
                     if phase == 'train':   
-                        d_loss_str = f"D loss: {running_loss_D[phase] / steps :.8f}"
-                        loss_from_D_str = f" Regressor loss from D: {loss_R_from_D.item()}"
-                    desc = f"loss1: {loss_1.item()}, loss2: {loss_2.item()}, {d_loss_str + loss_from_D_str if phase == 'train' else ''}"
+                        d_loss_str = f"D loss: {running_loss_D / steps :.8f}"
+                        loss_from_D_str = f"lossRfromD: {running_loss_R_from_D / steps :.8f}"
+                    desc = f"loss1: {loss_1.item()}, loss2: {loss_2.item()}, {(d_loss_str + loss_from_D_str) if phase == 'train' else ''}"
                     tqdm_loader.set_description(
                         f'{phase} epoch: {epoch}, {phase} loss: {(running_loss_R[phase] / steps) :.8f}, '
                         + desc
@@ -146,7 +146,8 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
 
                     running_loss_R[phase] += loss_R.item() * truth_data.size(0)
                     if phase == 'train':  
-                        running_loss_D[phase] += loss_D.item() * truth_data.size(0)
+                        running_loss_D += loss_D.item() * truth_data.size(0)
+                        running_loss_R_from_D += loss_R_from_D.item() * truth_data.size(0)
                     if step % 1000 == 0:
                         torch.cuda.empty_cache()
                         gc.collect()
@@ -162,7 +163,8 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                                            targets.reshape(targets.shape[0], -1), args, plot=epoch % 5 == 0, **kwargs)
                 with open(model_folder+"/output.txt", "a") as f:
                     if phase == 'train':
-                        f.write(f'{phase} epoch: {epoch}, {phase} loss: {running_loss_R[phase] / steps}, {phase} discriminator loss: {running_loss_D[phase] / steps}\n')
+                        f.write(f'{phase} epoch: {epoch}, {phase} loss: {running_loss_R[phase] / steps}, {phase} discriminator loss: {running_loss_D / steps}\n')
+                        f.write(f'lossRfromD: {running_loss_R_from_D / steps}\n')
                     else:
                         f.write(f'{phase} epoch: {epoch}, {phase} loss: {running_loss_R[phase] / steps}\n')
                     f.write(str(scores))
@@ -171,7 +173,7 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                     f.write("\n\n")
                 print(scores)
                 if phase == 'train':
-                    msg.append(f"{phase} epoch: {epoch}, {phase} loss: {running_loss_R[phase] / steps}, {phase} discriminator loss: {running_loss_D[phase] / steps}\n {scores}\n")
+                    msg.append(f"{phase} epoch: {epoch}, {phase} loss: {running_loss_R[phase] / steps}, {phase} discriminator loss: {running_loss_D / steps}\n {scores}\n")
                 else:
                     msg.append(f"{phase} epoch: {epoch}, {phase} loss: {running_loss_R[phase] / steps}\n {scores}\n")
                 if phase == 'val':
