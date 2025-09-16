@@ -206,8 +206,9 @@ def create_model(args):
 def create_main_loss(loss_bert,loss_MAE,loss_D, args):
     beta = args.beta
     theta = args.theta
+    bert_weight  = 1 - beta - theta if loss_D is not None else 1 - beta
     
-    return (1-beta-theta)*loss_bert / (loss_bert / loss_MAE + 1e-4).detach()\
+    return bert_weight*loss_bert / (loss_bert / loss_MAE + 1e-4).detach()\
             + beta * loss_MAE\
             + (theta * loss_D) if loss_D is not None else 0
 
