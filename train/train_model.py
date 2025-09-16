@@ -86,7 +86,7 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                         
                         for _ in range(n_critic):
                             with torch.no_grad():        
-                                z = torch.randn(B,z_dim).to(args.device)
+                                # z = torch.randn(B,z_dim).to(args.device)
                                 fake_times,spatio_temporal_features,_,_ = R_model(features,args)
                                 
                             D_fake, fake_imgs = D_model(spatio_temporal_features, fake_times, lens)
@@ -102,14 +102,14 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                         set_requires_grad(D_model, False)
                         set_requires_grad(R_model, True)
                         
-                        z = torch.rand(B,z_dim).to(device=args.device)
+                        # z = torch.rand(B,z_dim).to(device=args.device)
                         fake_times, spatio_temporal_features,_, loss_1 = R_model(features,args)
                         
                         D_fake,_ = D_model(spatio_temporal_features, fake_times, lens)
                         loss_R_from_D = w1(D_fake)
                         
-                        if getattr(args, "punish_only", False):    
-                            loss_R_from_D = torch.relu(loss_R_from_D)
+                        # if getattr(args, "punish_only", False):    
+                        #     loss_R_from_D = torch.relu(loss_R_from_D)
                         
                         
                         loss_2 = R_loss_func(truth=truth_data, predict=fake_times)
