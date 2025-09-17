@@ -207,10 +207,11 @@ def create_main_loss(loss_bert,loss_MAE,loss_D, args):
     beta = args.beta
     theta = args.theta
     bert_weight  = 1 - beta - theta if loss_D is not None else 1 - beta
-    
+    weighted_critic_loss = (theta * loss_D / (loss_D.abs() / loss_MAE + 1e-4).detach()) if loss_D is not None else torch.tensor(0.0, device=loss_bert.device)
+        
     return bert_weight*loss_bert / (loss_bert / loss_MAE + 1e-4).detach()\
             + beta * loss_MAE\
-            + (theta * loss_D / (loss_D.abs() / loss_MAE + 1e-4).detach()) if loss_D is not None else 0
+            + weighted_critic_loss
             # + (theta * loss_D) if loss_D is not None else 0
 
 def create_loss(args):
