@@ -63,7 +63,7 @@ def test_wgan_loop(R_model, D_model, data_loader, args):
             D_fake, _ = D_model(spatio_temporal_feats, output, lens)
             D_real, _ = D_model(spatio_temporal_feats, truth_data.unsqueeze(-1), lens)
             
-            _, wasserstein_D = w1(D_fake, D_real)
+            wasserstein_D = (D_real.mean() - D_fake.mean()).item()
             w1_values.append(wasserstein_D)
         
     with open(log_path, "w") as f:
