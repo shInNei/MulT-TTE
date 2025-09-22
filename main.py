@@ -11,6 +11,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--dataset', type=str, default='porto_MulT_TTE', help='input the dataset name', choices=['chengdu_MulT_TTE','porto_MulT_TTE'])
     parser.add_argument('-i', '--identify', type=str, help='input the specific identification information', default='')
 
+    parser.add_argument('-g', '--gradient_penalty', type=float, help='input the weight for gradient penalty', default=10.0)
     parser.add_argument('-D', '--device', type=str, help='input the chosen device', default="cuda:0")
     parser.add_argument('-C','--n_critic', type=int, help='input the number of critic', default=1)
     parser.add_argument('-o', '--optim', type=str, help='input the chosen optimization function', default="Adam", choices=['Adam'])

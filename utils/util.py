@@ -38,7 +38,7 @@ def to_var(var, device=0):
 
 class W1Distance:
     @staticmethod
-    def calculate_gp_v2(model: torch.nn.Module, real_images: torch.Tensor, fake_images: torch.Tensor, lens, device, lambda_gp=10):
+    def calculate_gp_v2(model: torch.nn.Module, real_images: torch.Tensor, fake_images: torch.Tensor, lens, device, lambda_gp=10.0):
         B, _, _ = real_images.shape
         epsilon = torch.rand(B, 1,1, device=device).expand_as(real_images) 
         
