@@ -58,7 +58,7 @@ def test_wgan_loop(R_model, D_model, data_loader, args):
             features = to_var(features, args.device)
             truth_data = to_var(truth_data, args.device)
             
-            output, spatio_temporal_feats,_, loss_1 = R_model(features, args)
+            output, spatio_temporal_feats,_, _ = R_model(features, args)
             lens = features['lens']
             D_fake, _ = D_model(spatio_temporal_feats, output, lens)
             D_real, _ = D_model(spatio_temporal_feats, truth_data.unsqueeze(-1), lens)
