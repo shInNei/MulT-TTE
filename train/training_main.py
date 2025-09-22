@@ -113,6 +113,10 @@ def train_main(args):
         print('No chosen model')
         sys.exit(0)
     print(f"{args.mode} {args.model}_{args.identify} on {args.dataset}")
+    # set random seed
+    torch.manual_seed(42)
+    torch.cuda.manual_seed(42)
+    np.random.seed(42)
     
     load_datadoct_pre(args)
     data_loaders, scaler = load_datadict(args)
