@@ -93,7 +93,7 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                             D_fake, fake_imgs = D_model(spatio_temporal_features, fake_times, lens)
                             D_real, real_imgs = D_model(spatio_temporal_features, truth_data.unsqueeze(-1), lens)
                             gp = W1Distance.calculate_gp_v2(D_model,real_imgs,fake_imgs,lens,args.device)
-                            loss_D = w1(D_fake,D_real,gp)
+                            loss_D,_ = w1(D_fake,D_real,gp)
                             
                             optimizer_D.zero_grad()
                             loss_D.backward()
@@ -106,7 +106,7 @@ def train_model(R_model: nn.Module,D_model: nn.Module, data_loaders: Dict[str, D
                         fake_times, spatio_temporal_features,_, loss_1 = R_model(features,args)
                         
                         D_fake,_ = D_model(spatio_temporal_features, fake_times, lens)
-                        loss_R_from_D = w1(D_fake)
+                        loss_R_from_D,_ = w1(D_fake)
                         
                         # if getattr(args, "punish_only", False):    
                         #     loss_R_from_D = torch.relu(loss_R_from_D)

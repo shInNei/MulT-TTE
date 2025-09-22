@@ -60,10 +60,12 @@ class W1Distance:
         return gp
      
     def __call__(self, D_fake, D_real=None,GP=None):
+        wasserstein_est = None
         if D_real is not None and D_fake is not None:
             # for discriminator
-            loss =  - torch.mean(D_real) + torch.mean(D_fake) + GP
+            wasserstein_est = D_real.mean().item() - D_fake.mean().item()
+            loss =  - wasserstein_est + GP
         else:
             # for generator
             loss = -torch.mean(D_fake)
-        return loss
+        return loss, wasserstein_est

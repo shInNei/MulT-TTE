@@ -10,10 +10,67 @@ import numpy as np
 from train.train_model import train_model
 from utils.prepare import create_model, create_loss
 from utils.prepare import load_datadict, load_datadoct_pre
+from utisl.prepare import load_test_datadict
 from utils.metric import calculate_metrics
 from utils.util import to_var, W1Distance
 import time
 
+def test_wgan(args):
+    if args.model == 'None':
+        print('No chosen model')
+        sys.exit(0)
+    print(f"{args.mode} {args.model}_{args.identify} on {args.dataset}")
+    
+    load_datadoct_pre(args)
+    test_loader, scaler = load_test_datadict(args)
+    args.scaler = scaler
+    
+    R_model, D_model = create_model(args)
+    
+    model_folder = f'{args.absPath}/data/save_models/{args.model}_{args.identify}_{args.dataset}'
+    args.model_folder = model_folder
+    R_model = R_model.to(args.device)
+    D_model = D_model.to(args.device)
+    
+    print(f'model config: {args.model_config}')
+    print(f'data config: {args.data_config}')
+    print(f'arg: {args}')
+    
+    final_R_model = torch.load(os.path.join(model_folder, 'final_R_model.pkl'), map_location=args.device)
+    final_D_model = torch.load(os.path.join(model_folder, 'final_D_model.pkl'), map_location=args.device)
+    R_model.load_state_dict(final_R_model['state_dict'], strict=False)
+    D_model.load_state_dict(final_D_model['state_dict'], strict=False)
+    
+    test_wgan_loop(R_model, D_model, test_loader, args)
+    
+def test_wgan_loop(R_model, D_model, data_loader, args):
+    R_model.eval()
+    D_model.eval()
+    inds = list()
+    w1 = W1Distance()
+    w1_values = list()
+    log_path = os.path.join(args.model_folder, "w1_values.txt")
+    tqdm_loader = tqdm(data_loader)
+    with torch.no_grad():
+        for step, (features, truth_data) in enumerate(tqdm_loader):
+            if isinstance(features, dict) and 'inds' in features.keys():
+                inds.append(features['inds'])
+            features = to_var(features, args.device)
+            truth_data = to_var(truth_data, args.device)
+            
+            output, spatio_temporal_feats,_, loss_1 = R_model(features, args)
+            lens = features['lens']
+            D_fake, _ = D_model(spatio_temporal_feats, output, lens)
+            D_real, _ = D_model(spatio_temporal_feats, truth_data.unsqueeze(-1), lens)
+            
+            _, wasserstein_D = w1(D_fake, D_real)
+            w1_values.append(wasserstein_D)
+        
+    with open(log_path, "w") as f:
+        for val in w1_values:
+            f.write(f"{val}\n")
+            
+    print(f"Wasserstein distances logged to {log_path}")
 
 def test_model(model, data_loader, args):
     model.eval()
