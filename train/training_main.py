@@ -10,7 +10,7 @@ import numpy as np
 from train.train_model import train_model
 from utils.prepare import create_model, create_loss
 from utils.prepare import load_datadict, load_datadoct_pre
-from utisl.prepare import load_test_datadict
+from utils.prepare import load_test_datadict
 from utils.metric import calculate_metrics
 from utils.util import to_var, W1Distance
 import time
