@@ -2,7 +2,9 @@ import sys
 import os
 import argparse
 from train.training_main import train_main
-
+import torch
+import numpy as np
+import random
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -30,5 +32,9 @@ if __name__ == '__main__':
     args.absPath = os.path.dirname(os.path.abspath(__file__))
     print(args.model)
     print(args.dataset)
+    torch.manual_seed(42)
+    torch.cuda.manual_seed(42)
+    np.random.seed(42)
+    random.seed(42)
     train_main(args)
     sys.exit(0)
