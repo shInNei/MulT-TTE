@@ -27,7 +27,7 @@ if __name__ == '__main__':
     parser.add_argument('-w', '--weight_decay', type=float, help='intput the weight decay of optimization',default=0.00001)
     parser.add_argument('-p', '--patience', type=int, help='intput the max iteration times of early stop',default=10)
     parser.add_argument('-r', '--mask_rate', type=float, help='intput the mask rate of segments in a trajectory', default=0.4)
-    parser.add_argument('s', '--seed', type=int, help='input the seed', default=42)
+    parser.add_argument('-s', '--seed', type=int, help='input the seed', default=42)
     args = parser.parse_args()
     args.absPath = os.path.dirname(os.path.abspath(__file__))
     print(args.model)
