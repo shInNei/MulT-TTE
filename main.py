@@ -6,7 +6,7 @@ from train.training_main import train_main
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('-m', '--model', type=str, help='input the model name', default='MulT_TTE', choices=['MulT_TTE'])
+    parser.add_argument('-m', '--model', type=str, help='input the model name', default='MulT_TTE', choices=['MulT_TTE','small_MulT_TTE'])
     parser.add_argument('-M', '--mode', type=str, default='train', help='input the process mode', choices=['train', 'resume', 'test'])
     parser.add_argument('-d', '--dataset', type=str, default='porto_MulT_TTE', help='input the dataset name', choices=['chengdu_MulT_TTE','porto_MulT_TTE'])
     parser.add_argument('-i', '--identify', type=str, help='input the specific identification information', default='')
