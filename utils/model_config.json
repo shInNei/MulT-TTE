@@ -12,7 +12,7 @@
   },
   "small_MulT_TTE":{
     "input_dim": 120,
-    "seq_input_dim": 80,
+    "seq_input_dim": 120,
     "seq_hidden_dim": 96,
     "seq_layer": 2,
     "bert_hiden_size": 48,
