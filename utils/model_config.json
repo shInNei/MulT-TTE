@@ -11,8 +11,8 @@
     "bert_attention_heads": 8
   },
   "small_MulT_TTE":{
-    "input_dim": 120,
-    "seq_input_dim": 104,
+    "input_dim": 104,
+    "seq_input_dim": 80,
     "seq_hidden_dim": 96,
     "seq_layer": 2,
     "bert_hiden_size": 48,
