@@ -33,7 +33,7 @@ if __name__ == '__main__':
     print(args.model)
     print(args.dataset)
     torch.manual_seed(args.seed)
-    torch.cuda.manual_seed(args.seed2)
+    torch.cuda.manual_seed(args.seed)
     np.random.seed(args.seed)
     random.seed(args.seed)
     train_main(args)
