@@ -2,7 +2,15 @@ import sys
 import os
 import argparse
 from train.training_main import train_main
+import torch
+import numpy as np
+import random
 
+SEED = 42
+torch.manual_seed(SEED)
+torch.cuda.manual_seed(SEED)
+np.random.seed(SEED)
+random.seed(SEED)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
