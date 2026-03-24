@@ -12,7 +12,7 @@ bidirectional=False
 
 class MulT_TTE(nn.Module):
     def __init__(self, input_dim, seq_input_dim, seq_hidden_dim, seq_layer, bert_hiden_size, pad_token_id,
-                 bert_attention_heads, bert_hidden_layers, decoder_layer, decode_head, vocab_size=27300):
+                 bert_attention_heads, bert_hidden_layers, decoder_layer, decode_head, vocab_size=47000):
 
         super(MulT_TTE, self).__init__()
         self.bert_config = BertConfig(num_attention_heads = bert_attention_heads, hidden_size = bert_hiden_size, pad_token_id=pad_token_id,
