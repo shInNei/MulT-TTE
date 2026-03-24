@@ -106,6 +106,9 @@ def train_model(model: nn.Module, data_loaders: Dict[str, DataLoader],
         time_elapsed = time.perf_counter() - since
         print(f"cost {time_elapsed} seconds")
 
+        torch.cuda.empty_cache()
+        gc.collect()
+      
         save_model(f"{model_folder}/best_model.pkl", **save_dict)
         save_model(f"{model_folder}/final_model.pkl",
                    **{'model_state_dict': copy.deepcopy(model.state_dict()),
